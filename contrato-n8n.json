@@ -1,0 +1,53 @@
+{
+  "producto_buscado": "teclado mecánico inalámbrico",
+  "resultados": [
+    {
+      "tienda": "Tienda D",
+      "producto": "Modelo X",
+      "precio": 225,
+      "envio": 15,
+      "costo_total": 240,
+      "tiempo_entrega_dias": 2,
+      "garantia": "2 años",
+      "reputacion": 4.7,
+      "confiabilidad_score": 0.91
+    },
+    {
+      "tienda": "Tienda A",
+      "producto": "Modelo X",
+      "precio": 250,
+      "envio": 0,
+      "costo_total": 250,
+      "tiempo_entrega_dias": 2,
+      "garantia": "1 año",
+      "reputacion": 4.8,
+      "confiabilidad_score": 0.88
+    },
+    {
+      "tienda": "Tienda B",
+      "producto": "Modelo X",
+      "precio": 210,
+      "envio": 25,
+      "costo_total": 235,
+      "tiempo_entrega_dias": 4,
+      "garantia": "1 año",
+      "reputacion": 4.5,
+      "confiabilidad_score": 0.82
+    },
+    {
+      "tienda": "Tienda C",
+      "producto": "Modelo X",
+      "precio": 190,
+      "envio": 40,
+      "costo_total": 230,
+      "tiempo_entrega_dias": 5,
+      "garantia": "6 meses",
+      "reputacion": 3.9,
+      "confiabilidad_score": 0.65
+    }
+  ],
+  "recomendacion": {
+    "tienda": "Tienda D",
+    "motivo": "Aunque no tiene el precio más bajo, presenta mejor equilibrio entre costo, garantía, tiempo de entrega y reputación en Trujillo."
+  }
+}
