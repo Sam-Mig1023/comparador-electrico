@@ -598,7 +598,7 @@ export default function Home() {
 
       {/* Barra de Navegación Superior Premium Glassmorphism */}
       <header className="bg-white/70 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 h-18 flex items-center justify-between">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-blue-600 to-sky-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 ring-4 ring-indigo-500/10 transition-transform hover:scale-105">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -608,12 +608,9 @@ export default function Home() {
             <div>
               <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 bg-clip-text text-transparent flex items-center gap-2">
                 CompraSmart
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 border border-indigo-200/60 shadow-2xs">
-                  Enterprise
-                </span>
               </span>
-              <span className="text-[11px] text-slate-500 font-medium block">
-                Sistema de Evaluación y Decisión Multicriterio de Productos Eléctricos
+              <span className="text-xs text-slate-500 font-medium block">
+                Comparador de productos
               </span>
             </div>
           </div>
@@ -636,7 +633,7 @@ export default function Home() {
             <div className="hidden md:flex items-center gap-2 text-xs bg-white/80 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-200/80 text-slate-700 shadow-2xs">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 animate-pulse" />
               <span className="font-semibold text-slate-800">Motor n8n</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60">
                 Conectado
               </span>
             </div>
@@ -645,39 +642,29 @@ export default function Home() {
       </header>
 
       {/* Contenedor Principal */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-10 flex-1 relative z-10">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 py-8 w-full space-y-8 flex-1 relative z-10">
         
         {/* Cabecera Hero con Enfoque de Marca Corporativa */}
-        <section className="text-center max-w-3xl mx-auto space-y-4 pt-2">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 backdrop-blur-md border border-indigo-100/80 text-slate-700 text-xs font-semibold shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600" />
-            <span className="bg-gradient-to-r from-indigo-700 to-blue-700 bg-clip-text text-transparent font-bold">
-              Modelo Matemático Ponderado
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="text-slate-600">Precios • Logística • Garantía • Reputación</span>
-          </div>
-
-          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-            Optimiza decisiones de compra con{" "}
+        <section className="text-center max-w-4xl mx-auto space-y-3 pt-2">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">
+            Compara productos y ofertas con{" "}
             <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent">
-              análisis predictivo
+              criterios claros
             </span>
           </h1>
 
-          <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
-            Integramos catálogos de distribuidores autorizados, estimamos costos logísticos según destino y
-            filtramos riesgos para garantizar compras informadas y costo-efectivas.
+          <p className="text-slate-600 text-base leading-relaxed max-w-2xl mx-auto">
+            Revisa precio, envío, entrega y confiabilidad en un solo lugar.
           </p>
         </section>
 
         {/* ========================================================================= */}
         {/* PANEL DE CONTROL: PARÁMETROS Y BÚSQUEDA INTEGRADA */}
         {/* ========================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 2xl:grid-cols-4 gap-6">
           
           {/* Barra Lateral de Configuración de Filtros (Glassmorphism Frosted) */}
-          <aside className="lg:col-span-1 space-y-5">
+          <aside className="2xl:col-span-1 space-y-5">
             <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-5 ring-1 ring-slate-900/5">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
@@ -688,7 +675,7 @@ export default function Home() {
                   </div>
                   Parámetros
                 </h2>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">
                   Filtros
                 </span>
               </div>
@@ -734,7 +721,7 @@ export default function Home() {
                     </svg>
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-500">Ajusta fletes y plazos de despacho a esta plaza</p>
+                <p className="text-xs text-slate-500">Ajusta fletes y plazos de despacho a esta plaza</p>
               </div>
 
               {/* Presupuesto Máximo con Presets Rápidos */}
@@ -777,7 +764,7 @@ export default function Home() {
                       type="button"
                       onClick={() => setPresupuestoMaximo(String(monto))}
                       disabled={cargando}
-                      className={`text-[10px] px-2.5 py-1 rounded-lg font-bold border transition cursor-pointer ${
+                      className={`text-xs px-2.5 py-1 rounded-lg font-bold border transition cursor-pointer ${
                         presupuestoMaximo === String(monto)
                           ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-xs"
                           : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200"
@@ -790,7 +777,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => setPresupuestoMaximo("")}
-                      className="text-[10px] px-2 py-0.5 text-slate-400 hover:text-rose-600 transition cursor-pointer font-semibold"
+                      className="text-xs px-2 py-0.5 text-slate-400 hover:text-rose-600 transition cursor-pointer font-semibold"
                     >
                       Sin límite
                     </button>
@@ -819,7 +806,7 @@ export default function Home() {
                       <span>Balanceado (Multicriterio)</span>
                     </div>
                     {prioridad === "balanceado" && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-100/80 font-bold text-indigo-700">
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-100/80 font-bold text-indigo-700">
                         Activo
                       </span>
                     )}
@@ -840,7 +827,7 @@ export default function Home() {
                       <span>Menor Costo Total</span>
                     </div>
                     {prioridad === "costo" && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-100/80 font-bold text-emerald-700">
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-100/80 font-bold text-emerald-700">
                         Activo
                       </span>
                     )}
@@ -861,7 +848,7 @@ export default function Home() {
                       <span>Menor Tiempo de Entrega</span>
                     </div>
                     {prioridad === "envio" && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-sky-100/80 font-bold text-sky-700">
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-sky-100/80 font-bold text-sky-700">
                         Activo
                       </span>
                     )}
@@ -882,7 +869,7 @@ export default function Home() {
                       <span>Mayor Reputación</span>
                     </div>
                     {prioridad === "reputacion" && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100/80 font-bold text-amber-700">
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-amber-100/80 font-bold text-amber-700">
                         Activo
                       </span>
                     )}
@@ -893,14 +880,14 @@ export default function Home() {
               {/* Botones de prueba para simular banderas de sustentación */}
               {datos && (
                 <div className="pt-3 border-t border-slate-100 space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
                     Modos de Sustentación
                   </span>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={alternarRiesgoSimulado}
-                      className={`text-[10px] py-1.5 px-2 rounded-xl font-bold border transition cursor-pointer ${
+                      className={`text-xs py-1.5 px-2 rounded-xl font-bold border transition cursor-pointer ${
                         datos.riesgo_detectado
                           ? "bg-rose-100 text-rose-800 border-rose-300 shadow-2xs"
                           : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
@@ -911,7 +898,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={alternarCacheSimulado}
-                      className={`text-[10px] py-1.5 px-2 rounded-xl font-bold border transition cursor-pointer ${
+                      className={`text-xs py-1.5 px-2 rounded-xl font-bold border transition cursor-pointer ${
                         datos.desde_cache
                           ? "bg-indigo-100 text-indigo-800 border-indigo-300 shadow-2xs"
                           : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
@@ -953,7 +940,7 @@ export default function Home() {
                         localStorage.removeItem("comprasmart_busquedas_recientes");
                       } catch {}
                     }}
-                    className="text-[10px] text-slate-400 hover:text-rose-600 transition cursor-pointer font-medium"
+                    className="text-xs text-slate-400 hover:text-rose-600 transition cursor-pointer font-medium"
                   >
                     Limpiar
                   </button>
@@ -971,7 +958,7 @@ export default function Home() {
                       <span className="truncate font-semibold text-slate-700 group-hover:text-indigo-700">
                         {reciente.consulta}
                       </span>
-                      <span className="text-[10px] text-slate-400 shrink-0 ml-2">
+                      <span className="text-xs text-slate-400 shrink-0 ml-2">
                         {reciente.ciudad}
                       </span>
                     </button>
@@ -982,7 +969,7 @@ export default function Home() {
           </aside>
 
           {/* Área Principal: Input de Búsqueda, Loader, y Vistas */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="2xl:col-span-3 space-y-6 min-w-0">
             
             {/* Input de Búsqueda Estilo Command Center con Gradiente y Sombras Suaves */}
             <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-5 sm:p-6 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.05)] ring-1 ring-slate-900/5 space-y-4">
@@ -1131,56 +1118,56 @@ export default function Home() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
                     {/* Card 1: Mejor Precio (Pastel Sky) */}
                     <div className="bg-gradient-to-br from-white via-sky-50/40 to-sky-100/20 p-4 rounded-3xl border border-sky-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] backdrop-blur-md">
-                      <div className="text-[11px] font-bold text-sky-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <div className="text-xs font-bold text-sky-800 uppercase tracking-wider flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-sky-500" />
                         Mejor Precio Total
                       </div>
                       <div className="text-2xl font-black text-slate-900 mt-1">
                         S/ {metricasKPI.minTotal.toFixed(2)}
                       </div>
-                      <div className="text-[10px] text-sky-700 font-semibold mt-0.5">
+                      <div className="text-xs text-sky-700 font-semibold mt-0.5">
                         Producto + Flete optimizado
                       </div>
                     </div>
 
                     {/* Card 2: Ahorro Máximo (Pastel Mint/Emerald) */}
                     <div className="bg-gradient-to-br from-white via-emerald-50/40 to-emerald-100/20 p-4 rounded-3xl border border-emerald-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] backdrop-blur-md">
-                      <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-500" />
                         Ahorro Máximo
                       </div>
                       <div className="text-2xl font-black text-emerald-600 mt-1">
                         S/ {metricasKPI.ahorroPotencial.toFixed(2)}
                       </div>
-                      <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">
+                      <div className="text-xs text-emerald-700 font-semibold mt-0.5">
                         vs. opción más costosa
                       </div>
                     </div>
 
                     {/* Card 3: Entrega Más Rápida (Pastel Lavender/Purple) */}
                     <div className="bg-gradient-to-br from-white via-purple-50/40 to-purple-100/20 p-4 rounded-3xl border border-purple-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] backdrop-blur-md">
-                      <div className="text-[11px] font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <div className="text-xs font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-purple-500" />
                         Entrega Rápida
                       </div>
                       <div className="text-2xl font-black text-slate-900 mt-1">
                         {metricasKPI.entregaMinima} {metricasKPI.entregaMinima === 1 ? "día" : "días"}
                       </div>
-                      <div className="text-[10px] text-purple-700 font-semibold mt-0.5">
+                      <div className="text-xs text-purple-700 font-semibold mt-0.5">
                         Plazo logístico más corto
                       </div>
                     </div>
 
                     {/* Card 4: Confiabilidad (Pastel Amber/Peach) */}
                     <div className="bg-gradient-to-br from-white via-amber-50/40 to-amber-100/20 p-4 rounded-3xl border border-amber-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] backdrop-blur-md">
-                      <div className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <div className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-amber-500" />
                         Score Máximo
                       </div>
                       <div className="text-2xl font-black text-amber-900 mt-1">
                         {Math.round(metricasKPI.scoreMaximo * 100)}%
                       </div>
-                      <div className="text-[10px] text-amber-700 font-semibold mt-0.5">
+                      <div className="text-xs text-amber-700 font-semibold mt-0.5">
                         Confiabilidad certificada
                       </div>
                     </div>
@@ -1247,7 +1234,7 @@ export default function Home() {
                         <div>
                           <div className="text-xs font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-2">
                             <span>Evaluación Multicriterio</span>
-                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-900 font-bold border border-indigo-200/60">
+                            <span className="text-xs px-2.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-900 font-bold border border-indigo-200/60">
                               Prioridad: {prioridad.toUpperCase()}
                             </span>
                           </div>
@@ -1305,25 +1292,25 @@ export default function Home() {
                       </p>
 
                       <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
-                        <span className="text-slate-500 font-bold">Atributos certificados:</span>
+                        <span className="text-slate-600 font-bold">Datos de la oferta:</span>
                         {tiendaRecomendadaItem.garantia && (
                           <span className="inline-flex items-center gap-1 bg-slate-100/80 text-slate-700 px-2.5 py-1 rounded-lg font-semibold border border-slate-200/60">
-                            🛡️ Garantía: {tiendaRecomendadaItem.garantia}
+                            Garantía: {tiendaRecomendadaItem.garantia}
                           </span>
                         )}
                         {tiendaRecomendadaItem.reputacion !== null &&
                           tiendaRecomendadaItem.reputacion !== undefined && (
                             <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 px-2.5 py-1 rounded-lg border border-amber-200/70 font-semibold">
-                              ★ Reputación: {tiendaRecomendadaItem.reputacion}
+                              Reputación: {tiendaRecomendadaItem.reputacion}
                             </span>
                           )}
                         {tiendaRecomendadaItem.empresa_transporte && (
                           <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-200/70 font-semibold">
-                            🚚 Logística: {tiendaRecomendadaItem.empresa_transporte}
+                            Transporte: {tiendaRecomendadaItem.empresa_transporte}
                           </span>
                         )}
                         <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200/70 font-semibold">
-                          ⚡ Despacho: {tiendaRecomendadaItem.tiempo_entrega_dias} días
+                          Entrega: {tiendaRecomendadaItem.tiempo_entrega_dias} días
                         </span>
                       </div>
                     </div>
@@ -1412,7 +1399,7 @@ export default function Home() {
 
                   {/* VISTA 1: TARJETAS COMPARATIVAS (FINTECH GRID) */}
                   {modoVista === "tarjetas" && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
                       {resultadosMostrados.map((item, idx) => {
                         const esRecomendada =
                           datos.recomendacion?.tienda &&
@@ -1447,7 +1434,7 @@ export default function Home() {
                                       {item.tienda}
                                     </h4>
                                     {esRecomendada && (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
                                         ★ Sugerida
                                       </span>
                                     )}
@@ -1464,7 +1451,7 @@ export default function Home() {
                               {/* Breakdown de Precio y Costo Total en Pastel */}
                               <div className="p-3.5 bg-gradient-to-r from-slate-50 to-indigo-50/30 rounded-2xl border border-slate-100 flex items-center justify-between">
                                 <div>
-                                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">
                                     Precio Base
                                   </div>
                                   <div className="text-sm font-semibold text-slate-800">
@@ -1472,7 +1459,7 @@ export default function Home() {
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">
                                     Flete Est.
                                   </div>
                                   <div className="text-sm font-semibold text-slate-800">
@@ -1484,7 +1471,7 @@ export default function Home() {
                                   </div>
                                 </div>
                                 <div className="text-right border-l border-slate-200/80 pl-3.5">
-                                  <div className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">
+                                  <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                                     Costo Total
                                   </div>
                                   <div
@@ -1498,18 +1485,18 @@ export default function Home() {
                               </div>
 
                               {/* Tags de atributos */}
-                              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                              <div className="flex flex-wrap items-center gap-1.5 text-xs">
                                 <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-lg font-semibold">
-                                  ⏱️ {item.tiempo_entrega_dias} {item.tiempo_entrega_dias === 1 ? "día" : "días"}
+                                  Entrega: {item.tiempo_entrega_dias} {item.tiempo_entrega_dias === 1 ? "día" : "días"}
                                 </span>
                                 {item.empresa_transporte && (
                                   <span className="bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-indigo-200/60 font-semibold">
-                                    🚚 {item.empresa_transporte}
+                                    Transporte: {item.empresa_transporte}
                                   </span>
                                 )}
                                 {item.garantia && (
                                   <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-lg font-semibold">
-                                    🛡️ {item.garantia}
+                                    Garantía: {item.garantia}
                                   </span>
                                 )}
                                 {item.reputacion !== null && item.reputacion !== undefined && (
@@ -1557,14 +1544,24 @@ export default function Home() {
 
                   {/* VISTA 2: TABLA MATRICIAL COMPLETA */}
                   {modoVista === "tabla" && (
-                    <div className="bg-white/85 backdrop-blur-xl rounded-3xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-slate-700">
+                    <>
+                      <div className="hidden 2xl:block bg-white/85 backdrop-blur-xl rounded-3xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                        <table className="w-full table-fixed text-left text-sm text-slate-700">
+                          <colgroup>
+                            <col className="w-[12%]" />
+                            <col className="w-[22%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[12%]" />
+                            <col className="w-[15%]" />
+                          </colgroup>
                           <thead className="bg-slate-100/80 text-xs uppercase font-bold text-slate-700 border-b border-slate-200 select-none">
                             <tr>
                               <th
                                 onClick={() => alternarColumna("tienda")}
-                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition"
+                                className="py-3.5 px-2.5 cursor-pointer hover:text-indigo-600 transition"
                               >
                                 <div className="flex items-center gap-1">
                                   Tienda
@@ -1573,7 +1570,7 @@ export default function Home() {
                               </th>
                               <th
                                 onClick={() => alternarColumna("producto")}
-                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition"
+                                className="py-3.5 px-2.5 cursor-pointer hover:text-indigo-600 transition"
                               >
                                 <div className="flex items-center gap-1">
                                   Producto
@@ -1582,7 +1579,7 @@ export default function Home() {
                               </th>
                               <th
                                 onClick={() => alternarColumna("precio")}
-                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition text-right"
+                                className="py-3.5 px-2 cursor-pointer hover:text-indigo-600 transition text-right"
                               >
                                 <div className="flex items-center justify-end gap-1">
                                   Precio
@@ -1591,7 +1588,7 @@ export default function Home() {
                               </th>
                               <th
                                 onClick={() => alternarColumna("envio")}
-                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition text-right"
+                                className="py-3.5 px-2 cursor-pointer hover:text-indigo-600 transition text-right"
                               >
                                 <div className="flex items-center justify-end gap-1">
                                   Envío (Est.)
@@ -1600,7 +1597,7 @@ export default function Home() {
                               </th>
                               <th
                                 onClick={() => alternarColumna("costo_total")}
-                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition text-right font-extrabold text-slate-900"
+                                className="py-3.5 px-2 cursor-pointer hover:text-indigo-600 transition text-right font-extrabold text-slate-900"
                               >
                                 <div className="flex items-center justify-end gap-1">
                                   Costo Total
@@ -1609,7 +1606,7 @@ export default function Home() {
                               </th>
                               <th
                                 onClick={() => alternarColumna("tiempo_entrega_dias")}
-                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition text-center"
+                                className="py-3.5 px-2 cursor-pointer hover:text-indigo-600 transition text-center"
                               >
                                 <div className="flex items-center justify-center gap-1">
                                   Entrega
@@ -1618,14 +1615,14 @@ export default function Home() {
                               </th>
                               <th
                                 onClick={() => alternarColumna("confiabilidad_score")}
-                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition text-center"
+                                className="py-3.5 px-2 cursor-pointer hover:text-indigo-600 transition text-center"
                               >
                                 <div className="flex items-center justify-center gap-1">
                                   Confiabilidad
                                   {columnaOrden === "confiabilidad_score" && (direccionOrden === "asc" ? " ▲" : " ▼")}
                                 </div>
                               </th>
-                              <th className="py-3.5 px-4 text-center">Acciones</th>
+                              <th className="py-3.5 px-2 text-center">Acciones</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -1651,12 +1648,12 @@ export default function Home() {
                                       : "hover:bg-slate-50/80"
                                   } ${esRecomendada ? "bg-indigo-50/30 border-l-4 border-l-indigo-600" : ""}`}
                                 >
-                                  <td className="py-4 px-4 font-semibold text-slate-900">
+                                  <td className="py-3 px-2.5 font-semibold text-slate-900 break-words">
                                     <div className="space-y-1">
-                                      <div className="flex items-center gap-2">
-                                        <span>{tiendaItem.tienda}</span>
+                                      <div className="flex flex-col items-start gap-1 min-w-0">
+                                        <span className="w-full [overflow-wrap:anywhere]">{tiendaItem.tienda}</span>
                                         {esRecomendada && (
-                                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                                          <span className="inline-flex max-w-full text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
                                             ★ Rec.
                                           </span>
                                         )}
@@ -1664,34 +1661,34 @@ export default function Home() {
                                       {tiendaItem.reputacion !== null &&
                                         tiendaItem.reputacion !== undefined &&
                                         String(tiendaItem.reputacion).trim() !== "" && (
-                                          <div className="text-[11px] text-amber-700 font-medium">
+                                          <div className="text-xs text-amber-700 font-medium">
                                             ★ Rep: {tiendaItem.reputacion}
                                           </div>
                                         )}
                                     </div>
                                   </td>
 
-                                  <td className="py-4 px-4 text-slate-700 max-w-xs">
+                                  <td className="py-3 px-2.5 text-slate-700 break-words">
                                     <div className="space-y-1">
                                       <span
-                                        className="font-medium text-slate-900 line-clamp-2 block"
+                                        className="font-medium text-slate-900 line-clamp-3 [overflow-wrap:anywhere] block"
                                         title={tiendaItem.producto}
                                       >
                                         {tiendaItem.producto}
                                       </span>
                                       {tiendaItem.garantia && (
-                                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md font-semibold">
-                                          🛡️ {tiendaItem.garantia}
+                                        <span className="inline-flex items-center gap-1 text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md font-semibold">
+                                          Garantía: {tiendaItem.garantia}
                                         </span>
                                       )}
                                     </div>
                                   </td>
 
-                                  <td className="py-4 px-4 text-right font-medium text-slate-700 whitespace-nowrap">
+                                  <td className="py-3 px-2.5 text-right font-medium text-slate-700">
                                     S/ {tiendaItem.precio.toFixed(2)}
                                   </td>
 
-                                  <td className="py-4 px-4 text-right whitespace-nowrap">
+                                  <td className="py-3 px-2.5 text-right">
                                     <div>
                                       {tiendaItem.envio === 0 ? (
                                         <span className="text-emerald-700 font-bold text-xs bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200/60">
@@ -1703,14 +1700,14 @@ export default function Home() {
                                         </span>
                                       )}
                                       {tiendaItem.empresa_transporte && (
-                                        <div className="text-[10px] text-slate-500 font-normal mt-0.5">
+                                        <div className="text-xs text-slate-500 font-normal mt-0.5">
                                           vía {tiendaItem.empresa_transporte}
                                         </div>
                                       )}
                                     </div>
                                   </td>
 
-                                  <td className="py-4 px-4 text-right font-extrabold text-base whitespace-nowrap">
+                                  <td className="py-3 px-2.5 text-right font-extrabold text-base">
                                     <span
                                       className={
                                         excedePresupuesto
@@ -1722,25 +1719,25 @@ export default function Home() {
                                     </span>
                                     {excedePresupuesto && (
                                       <div className="mt-0.5">
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-50 text-rose-600 border border-rose-200">
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-rose-50 text-rose-600 border border-rose-200">
                                           Excede presupuesto
                                         </span>
                                       </div>
                                     )}
                                   </td>
 
-                                  <td className="py-4 px-4 text-center whitespace-nowrap">
+                                  <td className="py-3 px-2.5 text-center">
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700">
                                       {tiendaItem.tiempo_entrega_dias}{" "}
                                       {tiendaItem.tiempo_entrega_dias === 1 ? "día" : "días"}
                                     </span>
                                   </td>
 
-                                  <td className="py-4 px-4 text-center whitespace-nowrap">
+                                  <td className="py-3 px-2.5 text-center">
                                     {renderBadgeConfiabilidad(tiendaItem.confiabilidad_score)}
                                   </td>
 
-                                  <td className="py-4 px-4 text-center whitespace-nowrap">
+                                  <td className="py-3 px-2.5 text-center">
                                     <div className="flex items-center justify-center gap-1.5">
                                       <button
                                         type="button"
@@ -1763,7 +1760,7 @@ export default function Home() {
                                             tiendaItem.link
                                           )
                                         }
-                                        className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs transition inline-flex items-center gap-1 cursor-pointer active:scale-95"
+                                        className="px-2.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs transition inline-flex items-center gap-1 cursor-pointer active:scale-95"
                                       >
                                         <span>Oferta</span>
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1777,14 +1774,44 @@ export default function Home() {
                             })}
                           </tbody>
                         </table>
-                      </div>
                     </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 2xl:hidden">
+                      {resultadosMostrados.map((item, idx) => {
+                        const excedePresupuesto = Boolean(item.excede_presupuesto || (presNum !== null && item.costo_total > presNum));
+                        const esRecomendada = datos.recomendacion?.tienda?.trim().toLowerCase() === item.tienda.trim().toLowerCase();
+                        return (
+                          <article key={`${item.tienda}-${idx}`} className={`rounded-2xl border bg-white/90 p-4 shadow-sm ${esRecomendada ? "border-indigo-300 ring-1 ring-indigo-200" : "border-slate-200"}`}>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <h4 className="font-bold text-base text-slate-900">{item.tienda}{esRecomendada && <span className="ml-2 text-xs font-semibold text-indigo-700">Recomendada</span>}</h4>
+                                <p className="text-sm text-slate-600 mt-1">{item.producto}</p>
+                              </div>
+                              {renderBadgeConfiabilidad(item.confiabilidad_score)}
+                            </div>
+                            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
+                              <div><dt className="text-slate-500">Precio</dt><dd className="font-semibold">S/ {item.precio.toFixed(2)}</dd></div>
+                              <div><dt className="text-slate-500">Envío</dt><dd className="font-semibold">{item.envio === 0 ? "Gratis" : `S/ ${item.envio.toFixed(2)}`}</dd></div>
+                              <div><dt className="text-slate-500">Entrega</dt><dd className="font-semibold">{item.tiempo_entrega_dias} {item.tiempo_entrega_dias === 1 ? "día" : "días"}</dd></div>
+                              {item.reputacion !== null && item.reputacion !== undefined && <div><dt className="text-slate-500">Reputación</dt><dd className="font-semibold">{item.reputacion}</dd></div>}
+                            </dl>
+                            <div className="flex items-center justify-between border-t border-slate-100 mt-3 pt-3 gap-2">
+                              <div><span className="text-xs text-slate-500">Costo total</span><div className={`text-lg font-bold ${excedePresupuesto ? "text-rose-600" : "text-slate-900"}`}>S/ {item.costo_total.toFixed(2)}</div></div>
+                              <div className="flex gap-2">
+                                <button type="button" onClick={() => setTiendaSeleccionadaModal(item)} className="px-3 py-2 text-sm font-semibold rounded-lg border border-slate-200 hover:bg-slate-50">Detalles</button>
+                                <button type="button" onClick={() => manejarAccionComprar(item.tienda, item.producto, item.costo_total, item.link)} className="px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Ver oferta</button>
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                    </>
                   )}
 
                   {/* Rotulación y Notas */}
                   <div className="p-4 bg-white/70 backdrop-blur-md rounded-2xl border border-slate-200/80 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-2xs">
                     <span>
-                      * Costos de flete y plazos son valores estimados referenciales para fines de demostración académica y comparativa.
+                      * El envío y el plazo de entrega son estimados.
                     </span>
                     <span className="font-bold text-slate-700">
                       Plaza evaluada: {ubicacion.ciudad}, {ubicacion.departamento}
@@ -1898,7 +1925,7 @@ export default function Home() {
                     </div>
 
                     {canalEnvio === "telegram" && (
-                      <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50/80 p-3 rounded-2xl border border-slate-200">
+                      <p className="text-xs text-slate-500 leading-relaxed bg-slate-50/80 p-3 rounded-2xl border border-slate-200">
                         <strong className="text-slate-800">Requisito para Telegram:</strong> Ingresa tu{" "}
                         <span className="font-semibold text-indigo-700">Chat ID numérico</span> (no tu @usuario).
                         Debes haber iniciado conversación al menos una vez con el bot de Telegram de n8n para permitir la entrega.
@@ -1906,7 +1933,7 @@ export default function Home() {
                     )}
 
                     {canalEnvio === "email" && (
-                      <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50/80 p-3 rounded-2xl border border-slate-200">
+                      <p className="text-xs text-slate-500 leading-relaxed bg-slate-50/80 p-3 rounded-2xl border border-slate-200">
                         <strong className="text-slate-800">Nota para Email (Resend):</strong> En entornos de prueba,
                         la entrega solo se garantiza hacia el correo del propietario registrado en la cuenta de Resend.
                       </p>
@@ -1949,7 +1976,7 @@ export default function Home() {
             <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-white/80 space-y-5 animate-in zoom-in-95 ring-1 ring-slate-900/10">
               <div className="flex items-start justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-indigo-700 tracking-wider">
+                  <span className="text-xs uppercase font-bold text-indigo-700 tracking-wider">
                     Ficha Técnica de Proveedor
                   </span>
                   <h3 className="text-xl font-black text-slate-900">
@@ -2017,7 +2044,7 @@ export default function Home() {
 
                 <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50/60 border border-indigo-100 rounded-2xl flex items-center justify-between">
                   <div>
-                    <div className="text-[10px] text-indigo-700 font-bold uppercase tracking-wider">
+                    <div className="text-xs text-indigo-700 font-bold uppercase tracking-wider">
                       Costo Total Evaluado
                     </div>
                     <div className="text-xl font-black text-indigo-950">
