@@ -7,9 +7,12 @@ import {
   ResultadoTienda,
   UbicacionDetalle,
   TipoPrioridad,
+  CanalEnvio,
+  EnviarResultadosRequest,
+  EnviarResultadosResponse,
 } from "../types";
 
-// Ubicaciones comunes preconfiguradas
+// Ubicaciones comunes preconfiguradas para cálculo logístico regional
 const UBICACIONES_DISPONIBLES: UbicacionDetalle[] = [
   { ciudad: "Trujillo", departamento: "La Libertad" },
   { ciudad: "Lima", departamento: "Lima Metropolitana" },
@@ -19,6 +22,9 @@ const UBICACIONES_DISPONIBLES: UbicacionDetalle[] = [
   { ciudad: "Cusco", departamento: "Cusco" },
 ];
 
+// Presupuestos rápidos sugeridos
+const PRESUPUESTOS_RAPIDOS = [200, 240, 280, 350];
+
 interface BusquedaReciente {
   consulta: string;
   ciudad: string;
@@ -27,8 +33,76 @@ interface BusquedaReciente {
   fecha: string;
 }
 
+// Datos de demostración representativos basados en contrato-n8n.json
+const DATOS_DEMOSTRACION: BusquedaResponse = {
+  producto_buscado: "teclado mecánico inalámbrico",
+  categoria: "Periféricos y Computación",
+  tipo: "Hardware",
+  desde_cache: false,
+  riesgo_detectado: false,
+  resultados: [
+    {
+      tienda: "Tienda D",
+      producto: "Modelo X Pro Inalámbrico Switch Brown",
+      link: "https://tiendad.com/producto/modelo-x-pro",
+      precio: 225,
+      envio: 15,
+      empresa_transporte: "Olva Courier",
+      costo_total: 240,
+      tiempo_entrega_dias: 2,
+      garantia: "2 años oficial",
+      reputacion: 4.7,
+      confiabilidad_score: 0.91,
+    },
+    {
+      tienda: "Tienda A",
+      producto: "Modelo X Estándar Wireless RGB",
+      link: "https://tiendaa.com/producto/modelo-x",
+      precio: 250,
+      envio: 0,
+      empresa_transporte: "Envío Propio Express",
+      costo_total: 250,
+      tiempo_entrega_dias: 2,
+      garantia: "1 año distribuidor",
+      reputacion: "4.8 / 5",
+      confiabilidad_score: 0.88,
+    },
+    {
+      tienda: "Tienda B",
+      producto: "Modelo X Gamer RGB Bluetooth",
+      link: "https://tiendab.com/producto/modelo-x-gamer",
+      precio: 210,
+      envio: 25,
+      empresa_transporte: "Shalom",
+      costo_total: 235,
+      tiempo_entrega_dias: 4,
+      garantia: null,
+      reputacion: 4.5,
+      confiabilidad_score: 0.82,
+    },
+    {
+      tienda: "Tienda C",
+      producto: "Modelo X Outlet Reacondicionado",
+      link: "https://tiendac.com/producto/modelo-x-outlet",
+      precio: 190,
+      envio: 40,
+      empresa_transporte: null,
+      costo_total: 230,
+      tiempo_entrega_dias: 5,
+      garantia: "6 meses local",
+      reputacion: null,
+      confiabilidad_score: 0.65,
+    },
+  ],
+  recomendacion: {
+    tienda: "Tienda D",
+    motivo:
+      "Aunque no presenta el valor nominal más bajo, ofrece la mejor relación costo-beneficio considerando flete formal, garantía de 2 años y reputación verificada en Trujillo.",
+  },
+};
+
 export default function Home() {
-  // Estados de entrada y configuración
+  // Parámetros de consulta
   const [consulta, setConsulta] = useState("");
   const [ubicacion, setUbicacion] = useState<UbicacionDetalle>({
     ciudad: "Trujillo",
@@ -37,43 +111,86 @@ export default function Home() {
   const [presupuestoMaximo, setPresupuestoMaximo] = useState<string>("");
   const [prioridad, setPrioridad] = useState<TipoPrioridad>("balanceado");
 
-  // Estados de carga e interactividad
-  const [cargando, setCargando] = useState(false);
-  const [mensajeCargaIndex, setMensajeCargaIndex] = useState(0);
+  // Modo de visualización (Tarjetas vs Tabla Matricial)
+  const [modoVista, setModoVista] = useState<"tarjetas" | "tabla">("tarjetas");
 
-  // Estados de respuesta, historial y notificaciones
+  // Estado de carga y progreso dinámico
+  const [cargando, setCargando] = useState(false);
+  const [segundosTranscurridos, setSegundosTranscurridos] = useState(0);
+
+  // Estados de datos y respuestas
   const [datos, setDatos] = useState<BusquedaResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busquedasRecientes, setBusquedasRecientes] = useState<BusquedaReciente[]>([]);
-  const [notificacionCompra, setNotificacionCompra] = useState<string | null>(null);
+  const [toastNotificacion, setToastNotificacion] = useState<string | null>(null);
 
-  // Ordenamiento manual opcional de columnas en la tabla
+  // Modal interactivo de detalle de tienda
+  const [tiendaSeleccionadaModal, setTiendaSeleccionadaModal] = useState<ResultadoTienda | null>(null);
+
+  // Historial en localStorage
+  const [busquedasRecientes, setBusquedasRecientes] = useState<BusquedaReciente[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const guardadas = localStorage.getItem("comprasmart_busquedas_recientes");
+      return guardadas ? JSON.parse(guardadas) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Estados para el módulo de envío de resultados (Telegram / Email)
+  const [canalEnvio, setCanalEnvio] = useState<CanalEnvio>("telegram");
+  const [destinoEnvio, setDestinoEnvio] = useState("");
+  const [enviandoResultados, setEnviandoResultados] = useState(false);
+  const [mensajeEnvio, setMensajeEnvio] = useState<{ tipo: "exito" | "error"; texto: string } | null>(null);
+
+  // Ordenamiento manual opcional de columnas en tabla
   const [columnaOrden, setColumnaOrden] = useState<keyof ResultadoTienda | null>(null);
   const [direccionOrden, setDireccionOrden] = useState<"asc" | "desc">("asc");
 
-  // Mensajes dinámicos durante la simulación de espera de 3 segundos
-  const mensajesCarga = useMemo(
-    () => [
-      "Interpretando búsqueda con IA en CompraSmart...",
-      `Consultando tiendas en tiempo real en ${ubicacion.ciudad}...`,
-      "Calculando costos y ranking de confiabilidad...",
-    ],
-    [ubicacion.ciudad]
-  );
-
-  // Cargar historial de localStorage al inicializar
+  // Temporizador dinámico para mensajes de espera progresivos
   useEffect(() => {
-    try {
-      const guardadas = localStorage.getItem("comprasmart_busquedas_recientes");
-      if (guardadas) {
-        setBusquedasRecientes(JSON.parse(guardadas));
-      }
-    } catch {
-      // Ignorar fallas de lectura en entornos restringidos
+    if (!cargando) return;
+    const intervalo = setInterval(() => {
+      setSegundosTranscurridos((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(intervalo);
+  }, [cargando]);
+
+  // Mensaje progresivo según el tiempo transcurrido
+  const mensajeCargaActual = useMemo(() => {
+    if (segundosTranscurridos < 3) {
+      return "Analizando parámetros de búsqueda y filtros solicitados...";
     }
+    if (segundosTranscurridos < 8) {
+      return `Consultando disponibilidad en tiendas para ${ubicacion.ciudad}...`;
+    }
+    if (segundosTranscurridos < 16) {
+      return "Extrayendo cotizaciones, costos de flete estimados y plazos de entrega...";
+    }
+    if (segundosTranscurridos < 28) {
+      return "Evaluando garantías oficiales y reputación verificada de vendedores...";
+    }
+    if (segundosTranscurridos < 45) {
+      return "Ejecutando ponderación multicriterio y mitigando proveedores de riesgo...";
+    }
+    if (segundosTranscurridos < 75) {
+      return "El flujo de n8n está procesando la solicitud. Esto puede tardar hasta 2 minutos...";
+    }
+    if (segundosTranscurridos < 105) {
+      return "Búsqueda exhaustiva en curso en fuentes externas. Gracias por tu espera...";
+    }
+    return "Consolidando reporte comparativo final de tiendas...";
+  }, [segundosTranscurridos, ubicacion.ciudad]);
+
+  // Toast flotante
+  const mostrarToast = useCallback((mensaje: string) => {
+    setToastNotificacion(mensaje);
+    setTimeout(() => {
+      setToastNotificacion(null);
+    }, 4000);
   }, []);
 
-  // Guardar búsqueda en el historial local (usuario_id)
+  // Guardar búsqueda en el historial local
   const guardarEnHistorial = useCallback(
     (termino: string, ubi: UbicacionDetalle, prio: TipoPrioridad) => {
       try {
@@ -103,19 +220,7 @@ export default function Home() {
     [busquedasRecientes]
   );
 
-  // Alternancia de mensajes durante la carga
-  useEffect(() => {
-    let intervalo: NodeJS.Timeout;
-    if (cargando) {
-      setMensajeCargaIndex(0);
-      intervalo = setInterval(() => {
-        setMensajeCargaIndex((prev) => (prev < mensajesCarga.length - 1 ? prev + 1 : prev));
-      }, 1000);
-    }
-    return () => clearInterval(intervalo);
-  }, [cargando, mensajesCarga.length]);
-
-  // Ejecución de la búsqueda: Petición real POST hacia /api/buscar
+  // Ejecución de la búsqueda real hacia /api/buscar
   const ejecutarBusqueda = async (
     terminoManual?: string,
     ubicacionManual?: UbicacionDetalle,
@@ -128,14 +233,16 @@ export default function Home() {
     const presupuestoTexto = presupuestoManual ?? presupuestoMaximo;
 
     if (!textoFinal) {
-      setError("Por favor, ingresa el producto o consulta que deseas comparar.");
+      setError("Por favor, ingresa el producto o consulta técnica que deseas evaluar.");
       return;
     }
 
     setError(null);
     setCargando(true);
+    setSegundosTranscurridos(0);
     setDatos(null);
     setColumnaOrden(null);
+    setMensajeEnvio(null);
 
     const payload: BusquedaRequest = {
       consulta: textoFinal,
@@ -158,37 +265,61 @@ export default function Home() {
       });
 
       if (!respuesta.ok) {
+        const errorData = await respuesta.json().catch(() => null);
         throw new Error(
-          "Hubo un problema al conectar con el servidor de análisis. Por favor, inténtelo de nuevo."
+          errorData?.error ||
+            "Hubo un problema al conectar con el motor de análisis en n8n."
         );
       }
 
       const respuestaData: BusquedaResponse = await respuesta.json();
       setDatos(respuestaData);
       guardarEnHistorial(textoFinal, ubicacionFinal, prioridadFinal);
-    } catch {
-      setError(
-        "Hubo un problema al conectar con el servidor de análisis. Por favor, inténtelo de nuevo."
-      );
+    } catch (err: unknown) {
+      const mensaje = err instanceof Error ? err.message : "Error inesperado de conexión.";
+      setError(mensaje);
     } finally {
-      // Garantizar que la pantalla nunca se quede colgada en 'cargando'
       setCargando(false);
     }
   };
 
-  // Disparar búsqueda al cambiar de prioridad (Flujo cliente-servidor)
+  // Cargar caso de demostración interactivo
+  const cargarCasoDemostracion = () => {
+    setConsulta(DATOS_DEMOSTRACION.producto_buscado);
+    setPresupuestoMaximo("245");
+    setPrioridad("balanceado");
+    setError(null);
+    setCargando(false);
+    setDatos(DATOS_DEMOSTRACION);
+    mostrarToast("✓ Caso de prueba representativo cargado para sustentación.");
+  };
+
+  // Alternar simulaciones de banderas en vivo
+  const alternarRiesgoSimulado = () => {
+    if (!datos) return;
+    setDatos((prev) => (prev ? { ...prev, riesgo_detectado: !prev.riesgo_detectado } : null));
+    mostrarToast(
+      !datos.riesgo_detectado
+        ? "⚠️ Alerta de riesgo simulada activada."
+        : "Alerta de riesgo desactivada."
+    );
+  };
+
+  const alternarCacheSimulado = () => {
+    if (!datos) return;
+    setDatos((prev) => (prev ? { ...prev, desde_cache: !prev.desde_cache } : null));
+    mostrarToast(
+      !datos.desde_cache
+        ? "⚡ Indicador de datos en caché activado."
+        : "Indicador de caché desactivado."
+    );
+  };
+
+  // Disparar búsqueda al cambiar de prioridad
   const cambiarPrioridadYBuscar = (nuevaPrioridad: TipoPrioridad) => {
     setPrioridad(nuevaPrioridad);
     if (consulta.trim()) {
       ejecutarBusqueda(consulta, ubicacion, nuevaPrioridad, presupuestoMaximo);
-    }
-  };
-
-  // Disparar búsqueda al aplicar presupuesto
-  const aplicarPresupuestoYBuscar = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (consulta.trim()) {
-      ejecutarBusqueda(consulta, ubicacion, prioridad, presupuestoMaximo);
     }
   };
 
@@ -197,7 +328,7 @@ export default function Home() {
     ejecutarBusqueda();
   };
 
-  // Seleccionar desde el historial y rellenar formulario
+  // Seleccionar desde el historial
   const seleccionarDesdeHistorial = (item: BusquedaReciente) => {
     setConsulta(item.consulta);
     const ubiEncontrada =
@@ -211,7 +342,7 @@ export default function Home() {
     ejecutarBusqueda(item.consulta, ubiEncontrada, item.prioridad);
   };
 
-  // Ordenar columnas interactivamente en la tabla
+  // Ordenar columnas en la tabla
   const alternarColumna = (columna: keyof ResultadoTienda) => {
     if (columnaOrden === columna) {
       setDireccionOrden((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -221,6 +352,13 @@ export default function Home() {
     }
   };
 
+  // Presupuesto numérico
+  const presNum = useMemo(() => {
+    if (!presupuestoMaximo) return null;
+    const n = Number(presupuestoMaximo);
+    return isNaN(n) || n <= 0 ? null : n;
+  }, [presupuestoMaximo]);
+
   // Lista de resultados mostrados
   const resultadosMostrados = useMemo(() => {
     if (!datos?.resultados) return [];
@@ -229,6 +367,10 @@ export default function Home() {
     return [...datos.resultados].sort((a, b) => {
       const valA = a[columnaOrden];
       const valB = b[columnaOrden];
+
+      if (valA === null || valA === undefined) return 1;
+      if (valB === null || valB === undefined) return -1;
+
       if (typeof valA === "number" && typeof valB === "number") {
         return direccionOrden === "asc" ? valA - valB : valB - valA;
       }
@@ -238,52 +380,186 @@ export default function Home() {
     });
   }, [datos, columnaOrden, direccionOrden]);
 
-  // Validación de Presupuesto Estricto (Sección 5.1):
-  // Detectar si el usuario ingresó un presupuesto_maximo y NINGÚN producto es menor o igual
-  const presNum = presupuestoMaximo ? Number(presupuestoMaximo) : null;
+  // Métricas agregadas para el Dashboard Ejecutivo
+  const metricasKPI = useMemo(() => {
+    if (!datos?.resultados || datos.resultados.length === 0) return null;
+
+    const lista = datos.resultados;
+    const preciosTotales = lista.map((r) => r.costo_total);
+    const minTotal = Math.min(...preciosTotales);
+    const maxTotal = Math.max(...preciosTotales);
+    const ahorroPotencial = maxTotal - minTotal;
+
+    const diasEntrega = lista.map((r) => r.tiempo_entrega_dias);
+    const entregaMinima = Math.min(...diasEntrega);
+
+    const scores = lista.map((r) => r.confiabilidad_score);
+    const scoreMaximo = Math.max(...scores);
+
+    return {
+      minTotal,
+      maxTotal,
+      ahorroPotencial,
+      entregaMinima,
+      scoreMaximo,
+      totalOpciones: lista.length,
+    };
+  }, [datos]);
+
+  // Detección de si ningún producto está dentro del presupuesto
   const ningunProductoEnPresupuesto = Boolean(
     presNum !== null &&
-    presNum > 0 &&
     datos?.resultados &&
     datos.resultados.length > 0 &&
     datos.resultados.every((item) => item.costo_total > presNum)
   );
 
-  // Manejador del botón 'Comprar' / 'Ver Oferta'
-  const manejarAccionComprar = (tienda: string, producto: string, costoTotal: number, link?: string) => {
-    setNotificacionCompra(
-      `Redirigiendo de forma segura a la pasarela oficial de ${tienda} para adquirir ${producto} por S/ ${costoTotal.toFixed(2)}...`
+  // Tienda recomendada resuelta por nombre
+  const tiendaRecomendadaItem = useMemo(() => {
+    if (!datos?.recomendacion?.tienda || !datos.resultados || datos.resultados.length === 0) {
+      return null;
+    }
+    const nombreBuscado = datos.recomendacion.tienda.trim().toLowerCase();
+    const encontrada = datos.resultados.find(
+      (r) => r.tienda.trim().toLowerCase() === nombreBuscado
     );
-    setTimeout(() => {
-      setNotificacionCompra(null);
-      if (link?.trim()) {
-        window.open(link, "_blank");
-      }
-    }, 4500);
+    return encontrada || datos.resultados[0];
+  }, [datos]);
+
+  // Simulación de redirección / compra
+  const manejarAccionComprar = (tienda: string, producto: string, costoTotal: number, link?: string) => {
+    mostrarToast(
+      `Redirección simulada a ${tienda} (${producto}) por S/ ${costoTotal.toFixed(2)}.`
+    );
+    if (link && link.trim() && link.startsWith("http")) {
+      setTimeout(() => {
+        window.open(link, "_blank", "noopener,noreferrer");
+      }, 1200);
+    }
   };
 
-  // Helper para renderizar badges de Confiabilidad (Mitigación de riesgo: < 0.75 Riesgo Alto)
+  // Enviar resultados vía /api/enviar
+  const manejarEnviarResultados = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!datos || !datos.resultados || datos.resultados.length === 0) return;
+
+    const destinoLimpio = destinoEnvio.trim();
+    if (!destinoLimpio) {
+      setMensajeEnvio({
+        tipo: "error",
+        texto:
+          canalEnvio === "telegram"
+            ? "Por favor, ingresa tu Chat ID numérico de Telegram."
+            : "Por favor, ingresa una dirección de correo válida.",
+      });
+      return;
+    }
+
+    if (canalEnvio === "telegram") {
+      if (destinoLimpio.startsWith("@") || isNaN(Number(destinoLimpio))) {
+        setMensajeEnvio({
+          tipo: "error",
+          texto:
+            "El destino para Telegram debe ser tu Chat ID numérico (ej. 123456789), no el @usuario. Recuerda escribirle al bot una vez antes de enviar.",
+        });
+        return;
+      }
+    }
+
+    setEnviandoResultados(true);
+    setMensajeEnvio(null);
+
+    const payload: EnviarResultadosRequest = {
+      canal: canalEnvio,
+      destino: destinoLimpio,
+      consulta: datos.producto_buscado,
+      productos: datos.resultados.map((item) => ({
+        nombre: item.producto,
+        precio: item.precio,
+        tienda: item.tienda,
+        url: item.link || "",
+      })),
+      recomendacion: datos.recomendacion,
+    };
+
+    try {
+      const res = await fetch("/api/enviar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const resJson: EnviarResultadosResponse = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(resJson.error || "No se pudo completar el envío del reporte.");
+      }
+
+      setMensajeEnvio({
+        tipo: "exito",
+        texto: resJson.mensaje || "Resultados enviados exitosamente.",
+      });
+      mostrarToast(
+        canalEnvio === "telegram"
+          ? "✓ Reporte enviado a tu Telegram."
+          : "✓ Reporte enviado a tu correo electrónico."
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al procesar el envío de resultados.";
+      setMensajeEnvio({
+        tipo: "error",
+        texto: msg,
+      });
+    } finally {
+      setEnviandoResultados(false);
+    }
+  };
+
+  // Copiar resumen de comparación al portapapeles
+  const copiarResumenPortapapeles = () => {
+    if (!datos) return;
+    const lineas = [
+      `📊 Comparativa CompraSmart: ${datos.producto_buscado}`,
+      `📍 Ubicación: ${ubicacion.ciudad}, ${ubicacion.departamento}`,
+      `⭐ Recomendación: ${datos.recomendacion?.tienda || "N/A"}`,
+      `💬 Motivo: ${datos.recomendacion?.motivo || ""}`,
+      "",
+      "Proveedores evaluados:",
+      ...datos.resultados.map(
+        (r, i) =>
+          `${i + 1}. ${r.tienda} | Costo Total: S/ ${r.costo_total.toFixed(2)} (Envío: S/ ${r.envio.toFixed(2)}) | Entrega: ${r.tiempo_entrega_dias}d`
+      ),
+    ].join("\n");
+
+    navigator.clipboard.writeText(lineas).then(() => {
+      mostrarToast("✓ Resumen comparativo copiado al portapapeles.");
+    });
+  };
+
+  // Renderizador de badges de Confiabilidad en tonos pastel
   const renderBadgeConfiabilidad = (score: number) => {
     const porcentaje = Math.round(score * 100);
 
     if (score < 0.75) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-300 animate-pulse">
-          <span className="w-2 h-2 rounded-full bg-rose-600" />
-          ⚠️ Riesgo Alto ({porcentaje}%)
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200/80 shadow-2xs">
+          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+          Riesgo ({porcentaje}%)
         </span>
       );
     }
     if (score >= 0.85) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-2xs">
           <span className="w-2 h-2 rounded-full bg-emerald-500" />
           Alta ({porcentaje}%)
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200/80 shadow-2xs">
         <span className="w-2 h-2 rounded-full bg-amber-500" />
         Media ({porcentaje}%)
       </span>
@@ -291,93 +567,134 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#f8faff] text-slate-900 flex flex-col antialiased relative overflow-hidden">
       
-      {/* Notificación flotante de compra */}
-      {notificacionCompra && (
-        <div className="fixed top-5 right-5 z-50 max-w-md p-4 bg-slate-900 text-white rounded-2xl shadow-xl border border-slate-700 flex items-center gap-3 animate-bounce">
-          <div className="w-8 h-8 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center shrink-0">
+      {/* ========================================================================= */}
+      {/* GRÁFICOS DIFUMINADOS DE FONDO (AURORA MESH & GLOW ORBS) */}
+      {/* ========================================================================= */}
+      <div className="fixed inset-0 bg-grid-pattern opacity-40 pointer-events-none z-0" />
+      <div className="fixed -top-40 -left-40 w-[34rem] h-[34rem] bg-indigo-200/35 rounded-full blur-[128px] pointer-events-none z-0" />
+      <div className="fixed top-20 -right-20 w-[38rem] h-[38rem] bg-sky-200/40 rounded-full blur-[140px] pointer-events-none z-0" />
+      <div className="fixed top-[45%] left-1/3 w-[30rem] h-[30rem] bg-purple-200/25 rounded-full blur-[120px] pointer-events-none z-0" />
+      <div className="fixed -bottom-32 right-1/4 w-[36rem] h-[36rem] bg-rose-100/35 rounded-full blur-[140px] pointer-events-none z-0" />
+
+      {/* Toast Flotante */}
+      {toastNotificacion && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm px-4 py-3 bg-slate-900/90 backdrop-blur-xl text-white rounded-2xl shadow-2xl border border-slate-700/60 flex items-center gap-3 transition-all animate-in fade-in slide-in-from-bottom-2">
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-blue-500 to-indigo-500 text-white font-bold flex items-center justify-center shrink-0 text-xs shadow-xs">
             ✓
           </div>
-          <p className="text-xs font-medium text-slate-100">{notificacionCompra}</p>
+          <p className="text-xs font-medium text-slate-100">{toastNotificacion}</p>
         </div>
       )}
 
-      {/* Barra de navegación superior CompraSmart en fondo blanco puro */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs">
+      {/* Barra de Navegación Superior Premium Glassmorphism */}
+      <header className="bg-white/70 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-blue-600 to-sky-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 ring-4 ring-indigo-500/10 transition-transform hover:scale-105">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
             <div>
-              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-1">
+              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 bg-clip-text text-transparent flex items-center gap-2">
                 CompraSmart
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 border border-indigo-200/60 shadow-2xs">
+                  Enterprise
+                </span>
               </span>
-              <span className="text-[10px] uppercase tracking-wider text-blue-600 font-bold block -mt-1">
-                Plataforma Inteligente de Compras
+              <span className="text-[11px] text-slate-500 font-medium block">
+                Sistema de Evaluación y Decisión Multicriterio de Productos Eléctricos
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-xs bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200 text-slate-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-medium">Motor de Decisión n8n Conectado</span>
+            {/* Botón de Demostración Rápida con Gradiente Pastel Suave */}
+            <button
+              type="button"
+              onClick={cargarCasoDemostracion}
+              className="text-xs font-bold px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-50 via-purple-50 to-sky-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 border border-indigo-200/70 transition-all flex items-center gap-2 cursor-pointer shadow-xs hover:shadow-sm active:scale-95"
+              title="Cargar inmediatamente un caso representativo preconfigurado"
+            >
+              <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>Cargar Demo</span>
+            </button>
+
+            {/* Badge de conexión con n8n en Railway */}
+            <div className="hidden md:flex items-center gap-2 text-xs bg-white/80 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-200/80 text-slate-700 shadow-2xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 animate-pulse" />
+              <span className="font-semibold text-slate-800">Motor n8n</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60">
+                Conectado
+              </span>
             </div>
           </div>
         </div>
       </header>
 
       {/* Contenedor Principal */}
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8 flex-1">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-10 flex-1 relative z-10">
         
-        {/* Cabecera y branding con fondo claro */}
-        <section className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
-            <span>⚡ Arquitectura Next.js + n8n</span>
-            <span>•</span>
-            <span>Optimización Multi-criterio</span>
+        {/* Cabecera Hero con Enfoque de Marca Corporativa */}
+        <section className="text-center max-w-3xl mx-auto space-y-4 pt-2">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 backdrop-blur-md border border-indigo-100/80 text-slate-700 text-xs font-semibold shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600" />
+            <span className="bg-gradient-to-r from-indigo-700 to-blue-700 bg-clip-text text-transparent font-bold">
+              Modelo Matemático Ponderado
+            </span>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-600">Precios • Logística • Garantía • Reputación</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">
-            Toma decisiones de compra con{" "}
-            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 bg-clip-text text-transparent">
-              CompraSmart
+
+          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
+            Optimiza decisiones de compra con{" "}
+            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent">
+              análisis predictivo
             </span>
           </h1>
-          <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-            Comparamos precios reales, flete a tu ciudad, velocidad de entrega, garantías y mitigamos
-            tiendas de riesgo con algoritmos predictivos.
+
+          <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+            Integramos catálogos de distribuidores autorizados, estimamos costos logísticos según destino y
+            filtramos riesgos para garantizar compras informadas y costo-efectivas.
           </p>
         </section>
 
         {/* ========================================================================= */}
-        {/* PANEL LATERAL DE CONFIGURACIÓN Y ÁREA CENTRAL (DISEÑO CLARO) */}
+        {/* PANEL DE CONTROL: PARÁMETROS Y BÚSQUEDA INTEGRADA */}
         {/* ========================================================================= */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
-          {/* Panel Lateral: Parámetros del Servidor */}
+          {/* Barra Lateral de Configuración de Filtros (Glassmorphism Frosted) */}
           <aside className="lg:col-span-1 space-y-5">
-            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-                Parámetros del Servidor
-              </h2>
+            <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-5 ring-1 ring-slate-900/5">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-200/60 flex items-center justify-center text-indigo-600">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                  </div>
+                  Parámetros
+                </h2>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">
+                  Filtros
+                </span>
+              </div>
 
-              {/* Selector de Ubicación */}
+              {/* Selector de Ciudad de Entrega */}
               <div className="space-y-1.5">
-                <label htmlFor="ubicacion" className="block text-xs font-semibold text-slate-700">
-                  Ubicación de entrega
+                <label htmlFor="ubicacion" className="block text-xs font-bold text-slate-700">
+                  Destino logístico
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-600">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-indigo-600">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
                   <select
@@ -395,7 +712,7 @@ export default function Home() {
                       }
                     }}
                     disabled={cargando}
-                    className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition appearance-none cursor-pointer"
+                    className="w-full pl-10 pr-8 py-2.5 bg-slate-50/70 hover:bg-slate-100/80 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition appearance-none cursor-pointer"
                   >
                     {UBICACIONES_DISPONIBLES.map((u) => (
                       <option key={u.ciudad} value={u.ciudad}>
@@ -409,16 +726,16 @@ export default function Home() {
                     </svg>
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-500">Por defecto: Trujillo (La Libertad)</p>
+                <p className="text-[10px] text-slate-500">Ajusta fletes y plazos de despacho a esta plaza</p>
               </div>
 
-              {/* Input Numérico de Presupuesto con botón de filtrado */}
-              <form onSubmit={aplicarPresupuestoYBuscar} className="space-y-1.5">
-                <label htmlFor="presupuesto" className="block text-xs font-semibold text-slate-700">
+              {/* Presupuesto Máximo con Presets Rápidos */}
+              <div className="space-y-2 pt-1">
+                <label htmlFor="presupuesto" className="block text-xs font-bold text-slate-700">
                   Presupuesto máximo <span className="text-slate-400 font-normal">(Opcional)</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-xs font-bold text-slate-500">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-xs font-bold text-slate-400">
                     S/
                   </div>
                   <input
@@ -430,40 +747,73 @@ export default function Home() {
                     onChange={(e) => setPresupuestoMaximo(e.target.value)}
                     placeholder="Ej. 240"
                     disabled={cargando}
-                    className="w-full pl-8 pr-16 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition"
+                    className="w-full pl-9 pr-14 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
                   />
-                  <button
-                    type="submit"
-                    disabled={cargando}
-                    className="absolute inset-y-1 right-1 px-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-lg transition cursor-pointer"
-                  >
-                    Filtrar
-                  </button>
+                  {presupuestoMaximo && (
+                    <button
+                      type="button"
+                      onClick={() => setPresupuestoMaximo("")}
+                      className="absolute inset-y-0 right-2 px-2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer font-bold"
+                      title="Limpiar presupuesto"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-                <p className="text-[11px] text-slate-500">
-                  Filtra o advierte opciones que superen el monto
-                </p>
-              </form>
 
-              {/* Filtros de Prioridad Interactivos (Pill Buttons) */}
+                {/* Pills de Presupuestos Rápidos */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  {PRESUPUESTOS_RAPIDOS.map((monto) => (
+                    <button
+                      key={monto}
+                      type="button"
+                      onClick={() => setPresupuestoMaximo(String(monto))}
+                      disabled={cargando}
+                      className={`text-[10px] px-2.5 py-1 rounded-lg font-bold border transition cursor-pointer ${
+                        presupuestoMaximo === String(monto)
+                          ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-xs"
+                          : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200"
+                      }`}
+                    >
+                      S/ {monto}
+                    </button>
+                  ))}
+                  {presupuestoMaximo && (
+                    <button
+                      type="button"
+                      onClick={() => setPresupuestoMaximo("")}
+                      className="text-[10px] px-2 py-0.5 text-slate-400 hover:text-rose-600 transition cursor-pointer font-semibold"
+                    >
+                      Sin límite
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Selector de Criterio de Prioridad */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <label className="block text-xs font-semibold text-slate-700">
-                  Criterio de Prioridad (Servidor)
+                <label className="block text-xs font-bold text-slate-700">
+                  Criterio de Ponderación
                 </label>
                 <div className="flex flex-col gap-1.5">
                   <button
                     type="button"
                     onClick={() => cambiarPrioridadYBuscar("balanceado")}
                     disabled={cargando}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition flex items-center justify-between cursor-pointer ${
+                    className={`w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                       prioridad === "balanceado"
-                        ? "bg-blue-50 text-blue-700 border border-blue-200 font-semibold shadow-2xs"
-                        : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-transparent"
+                        ? "bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-900 border border-indigo-300/80 shadow-xs"
+                        : "bg-slate-50/70 text-slate-600 hover:bg-slate-100 border border-transparent"
                     }`}
                   >
-                    <span>⚖️ Balanceado (IA)</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+                      <span>Balanceado (Multicriterio)</span>
+                    </div>
                     {prioridad === "balanceado" && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-100/80 font-bold text-indigo-700">
+                        Activo
+                      </span>
                     )}
                   </button>
 
@@ -471,15 +821,20 @@ export default function Home() {
                     type="button"
                     onClick={() => cambiarPrioridadYBuscar("costo")}
                     disabled={cargando}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition flex items-center justify-between cursor-pointer ${
+                    className={`w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                       prioridad === "costo"
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold shadow-2xs"
-                        : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-transparent"
+                        ? "bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-900 border border-emerald-300/80 shadow-xs"
+                        : "bg-slate-50/70 text-slate-600 hover:bg-slate-100 border border-transparent"
                     }`}
                   >
-                    <span>💰 Priorizar Menor Costo</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
+                      <span>Menor Costo Total</span>
+                    </div>
                     {prioridad === "costo" && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-100/80 font-bold text-emerald-700">
+                        Activo
+                      </span>
                     )}
                   </button>
 
@@ -487,15 +842,20 @@ export default function Home() {
                     type="button"
                     onClick={() => cambiarPrioridadYBuscar("envio")}
                     disabled={cargando}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition flex items-center justify-between cursor-pointer ${
+                    className={`w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                       prioridad === "envio"
-                        ? "bg-blue-50 text-blue-700 border border-blue-200 font-semibold shadow-2xs"
-                        : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-transparent"
+                        ? "bg-gradient-to-r from-sky-50 to-blue-50 text-sky-900 border border-sky-300/80 shadow-xs"
+                        : "bg-slate-50/70 text-slate-600 hover:bg-slate-100 border border-transparent"
                     }`}
                   >
-                    <span>⚡ Priorizar Envío Rápido</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-sky-600" />
+                      <span>Menor Tiempo de Entrega</span>
+                    </div>
                     {prioridad === "envio" && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-sky-100/80 font-bold text-sky-700">
+                        Activo
+                      </span>
                     )}
                   </button>
 
@@ -503,30 +863,68 @@ export default function Home() {
                     type="button"
                     onClick={() => cambiarPrioridadYBuscar("reputacion")}
                     disabled={cargando}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition flex items-center justify-between cursor-pointer ${
+                    className={`w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                       prioridad === "reputacion"
-                        ? "bg-amber-50 text-amber-800 border border-amber-200 font-semibold shadow-2xs"
-                        : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-transparent"
+                        ? "bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border border-amber-300/80 shadow-xs"
+                        : "bg-slate-50/70 text-slate-600 hover:bg-slate-100 border border-transparent"
                     }`}
                   >
-                    <span>⭐ Priorizar Reputación</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      <span>Mayor Reputación</span>
+                    </div>
                     {prioridad === "reputacion" && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100/80 font-bold text-amber-700">
+                        Activo
+                      </span>
                     )}
                   </button>
                 </div>
               </div>
+
+              {/* Botones de prueba para simular banderas de sustentación */}
+              {datos && (
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Modos de Sustentación
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={alternarRiesgoSimulado}
+                      className={`text-[10px] py-1.5 px-2 rounded-xl font-bold border transition cursor-pointer ${
+                        datos.riesgo_detectado
+                          ? "bg-rose-100 text-rose-800 border-rose-300 shadow-2xs"
+                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      {datos.riesgo_detectado ? "⚠️ Riesgo ON" : "Probar Riesgo"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={alternarCacheSimulado}
+                      className={`text-[10px] py-1.5 px-2 rounded-xl font-bold border transition cursor-pointer ${
+                        datos.desde_cache
+                          ? "bg-indigo-100 text-indigo-800 border-indigo-300 shadow-2xs"
+                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      {datos.desde_cache ? "⚡ Caché ON" : "Probar Caché"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Búsquedas Recientes (localStorage / Sesión de usuario) */}
+            {/* Búsquedas Recientes */}
             {busquedasRecientes.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-3 ring-1 ring-slate-900/5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Búsquedas Recientes
+                    Historial
                   </h3>
                   <button
                     type="button"
@@ -536,21 +934,21 @@ export default function Home() {
                         localStorage.removeItem("comprasmart_busquedas_recientes");
                       } catch {}
                     }}
-                    className="text-[10px] text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                    className="text-[10px] text-slate-400 hover:text-rose-600 transition cursor-pointer font-medium"
                   >
                     Limpiar
                   </button>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   {busquedasRecientes.map((reciente, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => seleccionarDesdeHistorial(reciente)}
-                      className="w-full text-left p-2 rounded-xl text-xs hover:bg-blue-50/70 border border-transparent hover:border-blue-200 transition group flex items-center justify-between cursor-pointer"
-                      title="Haz clic para rellenar este término y consultar"
+                      className="w-full text-left p-2.5 rounded-2xl text-xs hover:bg-indigo-50/70 border border-transparent hover:border-indigo-100 transition group flex items-center justify-between cursor-pointer"
+                      title="Haz clic para volver a evaluar esta consulta"
                     >
-                      <span className="truncate font-medium text-slate-700 group-hover:text-blue-700">
+                      <span className="truncate font-semibold text-slate-700 group-hover:text-indigo-700">
                         {reciente.consulta}
                       </span>
                       <span className="text-[10px] text-slate-400 shrink-0 ml-2">
@@ -563,25 +961,25 @@ export default function Home() {
             )}
           </aside>
 
-          {/* Área Principal: Chatbot, Skeleton y Resultados */}
+          {/* Área Principal: Input de Búsqueda, Loader, y Vistas */}
           <div className="lg:col-span-3 space-y-6">
             
-            {/* CHATBOT / CAJA DE BÚSQUEDA INTERACTIVA EN FONDO BLANCO */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-3">
+            {/* Input de Búsqueda Estilo Command Center con Gradiente y Sombras Suaves */}
+            <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-5 sm:p-6 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.05)] ring-1 ring-slate-900/5 space-y-4">
               <form onSubmit={manejarSubmit} className="space-y-3">
                 <div className="relative">
-                  <div className="absolute top-4 left-4 pointer-events-none text-blue-600">
+                  <div className="absolute top-4 left-4.5 pointer-events-none text-indigo-600">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
                   <textarea
                     rows={2}
                     value={consulta}
                     onChange={(e) => setConsulta(e.target.value)}
-                    placeholder="Quiero un teclado mecánico inalámbrico de máximo S/300 en Trujillo..."
+                    placeholder="Escribe el producto eléctrico que deseas comparar (Ej. teclado mecánico inalámbrico, taladro percutor 20V, multímetro digital)..."
                     disabled={cargando}
-                    className="w-full pl-12 pr-28 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 transition resize-none"
+                    className="w-full pl-13 pr-40 py-4 bg-slate-50/80 border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-3 focus:ring-indigo-500/25 focus:border-indigo-500 transition resize-none font-medium leading-relaxed"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -589,25 +987,25 @@ export default function Home() {
                       }
                     }}
                   />
-                  <div className="absolute bottom-3.5 right-3">
+                  <div className="absolute bottom-3.5 right-3.5 flex items-center gap-2">
                     <button
                       type="submit"
                       disabled={cargando || !consulta.trim()}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      className="px-5 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:via-indigo-700 hover:to-violet-700 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none cursor-pointer"
                     >
                       {cargando ? (
                         <>
                           <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                           </svg>
-                          <span>Analizando...</span>
+                          <span>Evaluando...</span>
                         </>
                       ) : (
                         <>
-                          <span>Consultar IA</span>
+                          <span>Comparar Ofertas</span>
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                           </svg>
                         </>
                       )}
@@ -615,9 +1013,9 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Chips de sugerencias rápidas */}
+                {/* Sugerencias Rápidas con Estilo Pastel */}
                 <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-500">
-                  <span className="font-semibold text-slate-700">Ejemplos rápidos:</span>
+                  <span className="font-bold text-slate-700">Casos rápidos:</span>
                   {[
                     "teclado mecánico inalámbrico",
                     "taladro percutor inalámbrico 20V",
@@ -631,7 +1029,7 @@ export default function Home() {
                         ejecutarBusqueda(ejemplo);
                       }}
                       disabled={cargando}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-transparent text-slate-600 transition cursor-pointer"
+                      className="px-3 py-1 rounded-xl bg-slate-100/80 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200/80 text-slate-600 transition-all font-medium cursor-pointer"
                     >
                       {ejemplo}
                     </button>
@@ -639,20 +1037,20 @@ export default function Home() {
                 </div>
               </form>
 
-              {/* BANNER DE ERROR ROBUSTO */}
+              {/* Banner de Error */}
               {error && (
-                <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-3 shadow-2xs">
+                <div className="p-4 bg-rose-50/80 border border-rose-200 rounded-2xl text-xs text-rose-800 flex items-start gap-3 shadow-2xs animate-in fade-in">
                   <svg className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <div className="space-y-1">
-                    <p className="font-bold text-rose-900">Aviso del Sistema CompraSmart</p>
+                    <p className="font-bold text-rose-900">Aviso del Sistema</p>
                     <p>{error}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => ejecutarBusqueda()}
-                    className="ml-auto px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shrink-0 cursor-pointer transition"
+                    className="ml-auto px-3.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shrink-0 cursor-pointer transition shadow-xs"
                   >
                     Reintentar
                   </button>
@@ -661,360 +1059,860 @@ export default function Home() {
             </div>
 
             {/* ========================================================================= */}
-            {/* SKELETON LOADER INTELIGENTE CON PARPADEO DINÁMICO */}
+            {/* LOADER PROGRESIVO CON TIEMPO REAL */}
             {/* ========================================================================= */}
             {cargando && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-2xl p-6 border border-blue-100 shadow-sm flex flex-col items-center justify-center text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 animate-spin">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="space-y-6 animate-in fade-in">
+                <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-8 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.05)] ring-1 ring-slate-900/5 flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-50 via-purple-50 to-sky-50 border border-indigo-200/80 flex items-center justify-center text-indigo-600 animate-spin shadow-inner">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 animate-pulse">
-                      {mensajesCarga[mensajeCargaIndex]}
+                  <div className="max-w-md">
+                    <h3 className="text-base font-bold text-slate-900">
+                      {mensajeCargaActual}
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Procesando tiendas oficiales y mitigando riesgos con IA...
+                    <p className="text-xs text-slate-500 mt-1">
+                      Tiempo transcurrido: <span className="font-bold text-indigo-700">{segundosTranscurridos}s</span> (la evaluación y cálculo de fletes puede tardar hasta 2 minutos).
                     </p>
                   </div>
-                  <div className="w-56 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div className="w-80 bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-inner p-0.5">
                     <div
-                      className="bg-blue-600 h-1.5 rounded-full transition-all duration-1000 ease-out"
-                      style={{ width: `${((mensajeCargaIndex + 1) / mensajesCarga.length) * 100}%` }}
+                      className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 h-full rounded-full transition-all duration-500 ease-out shadow-xs"
+                      style={{
+                        width: `${Math.min(95, Math.max(10, Math.round((segundosTranscurridos / 120) * 100)))}%`,
+                      }}
                     />
                   </div>
                 </div>
 
-                {/* Siluetas animadas (Skeleton) */}
+                {/* Skeletons de Carga */}
                 <div className="space-y-4 animate-pulse">
-                  <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
-                    <div className="h-5 w-48 bg-slate-200 rounded-lg" />
-                    <div className="h-8 w-64 bg-slate-200 rounded-lg" />
-                    <div className="h-16 w-full bg-slate-100 rounded-xl" />
-                  </div>
-                  <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
-                    <div className="h-6 w-36 bg-slate-200 rounded-md" />
-                    <div className="space-y-2 pt-2">
-                      {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-12 w-full bg-slate-100 rounded-xl" />
-                      ))}
-                    </div>
+                  <div className="bg-white/70 rounded-3xl p-6 border border-slate-200/80 h-36" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="bg-white/70 rounded-3xl p-5 border border-slate-200/80 h-44" />
+                    ))}
                   </div>
                 </div>
               </div>
             )}
 
             {/* ========================================================================= */}
-            {/* VISTA DE RESULTADOS (CUANDO HAY DATOS Y NO ESTÁ CARGANDO) */}
+            {/* RESULTADOS Y DASHBOARD ANALÍTICO */}
             {/* ========================================================================= */}
             {datos && !cargando && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-in fade-in">
 
-                {/* CONTINGENCIA SECCIÓN 5.1: CONTROL DE PRESUPUESTO ESTRICTO */}
-                {ningunProductoEnPresupuesto && (
-                  <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-start gap-3.5">
-                    <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0 text-lg">
-                      ⚠️
+                {/* KPI METRIC CARDS EN TONOS PASTEL */}
+                {metricasKPI && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                    {/* Card 1: Mejor Precio (Pastel Sky) */}
+                    <div className="bg-gradient-to-br from-white via-sky-50/40 to-sky-100/20 p-4 rounded-3xl border border-sky-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] backdrop-blur-md">
+                      <div className="text-[11px] font-bold text-sky-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-sky-500" />
+                        Mejor Precio Total
+                      </div>
+                      <div className="text-2xl font-black text-slate-900 mt-1">
+                        S/ {metricasKPI.minTotal.toFixed(2)}
+                      </div>
+                      <div className="text-[10px] text-sky-700 font-semibold mt-0.5">
+                        Producto + Flete optimizado
+                      </div>
+                    </div>
+
+                    {/* Card 2: Ahorro Máximo (Pastel Mint/Emerald) */}
+                    <div className="bg-gradient-to-br from-white via-emerald-50/40 to-emerald-100/20 p-4 rounded-3xl border border-emerald-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] backdrop-blur-md">
+                      <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        Ahorro Máximo
+                      </div>
+                      <div className="text-2xl font-black text-emerald-600 mt-1">
+                        S/ {metricasKPI.ahorroPotencial.toFixed(2)}
+                      </div>
+                      <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">
+                        vs. opción más costosa
+                      </div>
+                    </div>
+
+                    {/* Card 3: Entrega Más Rápida (Pastel Lavender/Purple) */}
+                    <div className="bg-gradient-to-br from-white via-purple-50/40 to-purple-100/20 p-4 rounded-3xl border border-purple-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] backdrop-blur-md">
+                      <div className="text-[11px] font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-purple-500" />
+                        Entrega Rápida
+                      </div>
+                      <div className="text-2xl font-black text-slate-900 mt-1">
+                        {metricasKPI.entregaMinima} {metricasKPI.entregaMinima === 1 ? "día" : "días"}
+                      </div>
+                      <div className="text-[10px] text-purple-700 font-semibold mt-0.5">
+                        Plazo logístico más corto
+                      </div>
+                    </div>
+
+                    {/* Card 4: Confiabilidad (Pastel Amber/Peach) */}
+                    <div className="bg-gradient-to-br from-white via-amber-50/40 to-amber-100/20 p-4 rounded-3xl border border-amber-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] backdrop-blur-md">
+                      <div className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        Score Máximo
+                      </div>
+                      <div className="text-2xl font-black text-amber-900 mt-1">
+                        {Math.round(metricasKPI.scoreMaximo * 100)}%
+                      </div>
+                      <div className="text-[10px] text-amber-700 font-semibold mt-0.5">
+                        Confiabilidad certificada
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* BANNER DE ADVERTENCIA DE RIESGO DETECTADO */}
+                {datos.riesgo_detectado && (
+                  <div className="bg-rose-50/90 backdrop-blur-md border border-rose-300/80 rounded-3xl p-5 shadow-xs flex items-start gap-3.5 transition-all">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 shrink-0">
+                      <svg className="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
                     </div>
                     <div className="space-y-1">
-                      <h4 className="text-sm font-bold text-slate-900">
-                        Presupuesto ajustado (Límite: S/ {presNum?.toFixed(2)})
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-300 animate-pulse">
+                          <span className="w-2 h-2 rounded-full bg-rose-600" />
+                          Alerta de Confiabilidad: Riesgo Detectado
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-rose-950 mt-1">
+                        Se identificaron ofertas o vendedores con anomalías en esta búsqueda
                       </h4>
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        Ninguna de las tiendas evaluadas cuenta con un costo total menor o igual a tu presupuesto de{" "}
-                        <strong className="text-slate-800">S/ {presNum?.toFixed(2)}</strong>. Mostramos la lista
-                        completa de opciones abajo para permitirte comparar alternativas cercanas o evaluar un ajuste en tu presupuesto.
+                      <p className="text-xs text-rose-800 leading-relaxed">
+                        Uno o más resultados evaluados presentan índices de confiabilidad por debajo del
+                        umbral seguro (75%), reputación no verificada o precios discrepantes. Te
+                        sugerimos priorizar la alternativa recomendada y tiendas con calificaciones comprobadas.
                       </p>
                     </div>
                   </div>
                 )}
-                
-                {/* VISTA DE RECOMENDACIÓN FINAL GENERADA POR EL SERVIDOR */}
-                {datos.recomendacion && (
-                  <section className="bg-gradient-to-r from-blue-50/70 via-white to-indigo-50/50 rounded-2xl p-6 sm:p-7 border-2 border-blue-500/80 shadow-sm relative overflow-hidden">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-blue-100 pb-4 mb-4">
+
+                {/* AVISO DE PRESUPUESTO AJUSTADO */}
+                {ningunProductoEnPresupuesto && (
+                  <div className="bg-amber-50/80 backdrop-blur-md rounded-3xl p-5 border border-amber-200/80 shadow-xs flex items-start gap-3.5">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
+                      <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-slate-900">
+                        Presupuesto ajustado (Límite solicitado: S/ {presNum?.toFixed(2)})
+                      </h4>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Ninguna de las opciones encontradas cuenta con un costo total menor o igual a tu presupuesto de{" "}
+                        <strong className="text-slate-800">S/ {presNum?.toFixed(2)}</strong>. Mostramos las opciones evaluadas para que puedas comparar el diferencial requerido.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* CARD DE RECOMENDACIÓN FINAL CON BORDE IRIDISCENTE */}
+                {datos.recomendacion && tiendaRecomendadaItem && (
+                  <section className="bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/20 rounded-3xl p-6 sm:p-7 border-2 border-indigo-400/50 shadow-[0_8px_30px_rgb(99,102,241,0.08)] relative overflow-hidden backdrop-blur-xl">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-100/70 pb-4 mb-4">
                       <div className="flex items-start gap-3.5">
-                        <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center text-2xl shadow-xs shrink-0 font-bold">
-                          💡
+                        <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/25 shrink-0 ring-4 ring-indigo-500/10">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
                         </div>
                         <div>
-                          <div className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
-                            <span>Recomendación Inteligente de CompraSmart</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold">
+                          <div className="text-xs font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-2">
+                            <span>Evaluación Multicriterio</span>
+                            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-900 font-bold border border-indigo-200/60">
                               Prioridad: {prioridad.toUpperCase()}
                             </span>
                           </div>
                           <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2.5 mt-0.5">
                             {datos.recomendacion.tienda}
-                            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                              🏆 Mejor Opción
+                            <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 inline-flex items-center gap-1 shadow-2xs">
+                              <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                              </svg>
+                              Alternativa Óptima
                             </span>
                           </h2>
                         </div>
                       </div>
 
-                      {/* Botón de Compra Destacado con Azul Corporativo Sólido */}
-                      {datos.resultados[0] && (
+                      <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => setTiendaSeleccionadaModal(tiendaRecomendadaItem)}
+                          className="px-4 py-2.5 bg-white/90 hover:bg-white text-slate-700 font-bold text-xs rounded-xl border border-slate-200/80 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs hover:shadow-sm"
+                        >
+                          <svg className="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          <span>Ver Desglose</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={() =>
                             manejarAccionComprar(
-                              datos.recomendacion.tienda,
-                              datos.resultados[0].producto,
-                              datos.resultados[0].costo_total
+                              tiendaRecomendadaItem.tienda,
+                              tiendaRecomendadaItem.producto,
+                              tiendaRecomendadaItem.costo_total,
+                              tiendaRecomendadaItem.link
                             )
                           }
-                          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+                          className="px-5 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:via-indigo-700 hover:to-violet-700 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center gap-2 cursor-pointer"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
-                          <span>Ver Oferta (S/ {datos.resultados[0].costo_total.toFixed(2)})</span>
+                          <span>
+                            Ver Oferta (S/ {tiendaRecomendadaItem.costo_total.toFixed(2)})
+                          </span>
                         </button>
-                      )}
+                      </div>
                     </div>
 
-                    {/* Motivo dinámico calculado por el servidor */}
-                    <div className="bg-white rounded-xl p-4 border border-blue-100/80 shadow-2xs">
+                    <div className="bg-white/80 backdrop-blur-md rounded-2xl p-4.5 border border-indigo-100/70 shadow-2xs space-y-3">
                       <p className="text-sm text-slate-700 leading-relaxed font-normal">
-                        <span className="font-semibold text-blue-950">Motivo del análisis: </span>
+                        <span className="font-bold text-indigo-950">Fundamento técnico: </span>
                         {datos.recomendacion.motivo}
                       </p>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
+                        <span className="text-slate-500 font-bold">Atributos certificados:</span>
+                        {tiendaRecomendadaItem.garantia && (
+                          <span className="inline-flex items-center gap-1 bg-slate-100/80 text-slate-700 px-2.5 py-1 rounded-lg font-semibold border border-slate-200/60">
+                            🛡️ Garantía: {tiendaRecomendadaItem.garantia}
+                          </span>
+                        )}
+                        {tiendaRecomendadaItem.reputacion !== null &&
+                          tiendaRecomendadaItem.reputacion !== undefined && (
+                            <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 px-2.5 py-1 rounded-lg border border-amber-200/70 font-semibold">
+                              ★ Reputación: {tiendaRecomendadaItem.reputacion}
+                            </span>
+                          )}
+                        {tiendaRecomendadaItem.empresa_transporte && (
+                          <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-200/70 font-semibold">
+                            🚚 Logística: {tiendaRecomendadaItem.empresa_transporte}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200/70 font-semibold">
+                          ⚡ Despacho: {tiendaRecomendadaItem.tiempo_entrega_dias} días
+                        </span>
+                      </div>
                     </div>
                   </section>
                 )}
 
-                {/* VISTA DE RESULTADOS COMPARATIVOS: TABLA SAAS PREMIUM */}
-                <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  
-                  {/* Barra superior de la tabla */}
-                  <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white">
+                {/* ========================================================================= */}
+                {/* VISTA COMPARATIVA: SELECTOR DE MODO (TARJETAS VS TABLA) */}
+                {/* ========================================================================= */}
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/80 backdrop-blur-xl p-4 sm:p-5 rounded-3xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5">
                     <div>
-                      <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                        <span>Ranking de Tiendas Evaluadas</span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-                          {resultadosMostrados.length} opciones
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-extrabold text-slate-900">
+                          Catálogo de Ofertas Evaluadas
+                        </h3>
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                          {resultadosMostrados.length} alternativas
                         </span>
+
+                        {datos.desde_cache && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-sky-50 to-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-2xs">
+                            <svg className="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Caché (&lt; 2h)
+                          </span>
+                        )}
+                      </div>
+
+                      {(datos.categoria || datos.tipo) && (
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {datos.categoria && <span>Categoría: <strong>{datos.categoria}</strong></span>}
+                          {datos.categoria && datos.tipo && <span> • </span>}
+                          {datos.tipo && <span>Tipo: <strong>{datos.tipo}</strong></span>}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Selector de Vista (Tarjetas vs Tabla) */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={copiarResumenPortapapeles}
+                        className="p-2.5 text-slate-500 hover:text-indigo-700 bg-slate-50 hover:bg-white border border-slate-200 rounded-xl transition cursor-pointer shadow-2xs"
+                        title="Copiar resumen al portapapeles"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                      </button>
+
+                      <div className="inline-flex rounded-xl p-1 bg-slate-100/80 border border-slate-200/80 text-xs shadow-inner">
+                        <button
+                          type="button"
+                          onClick={() => setModoVista("tarjetas")}
+                          className={`px-3.5 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                            modoVista === "tarjetas"
+                              ? "bg-white text-indigo-700 shadow-xs"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                          </svg>
+                          <span>Tarjetas</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setModoVista("tabla")}
+                          className={`px-3.5 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                            modoVista === "tabla"
+                              ? "bg-white text-indigo-700 shadow-xs"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <span>Tabla</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* VISTA 1: TARJETAS COMPARATIVAS (FINTECH GRID) */}
+                  {modoVista === "tarjetas" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {resultadosMostrados.map((item, idx) => {
+                        const esRecomendada =
+                          datos.recomendacion?.tienda &&
+                          item.tienda.trim().toLowerCase() ===
+                            datos.recomendacion.tienda.trim().toLowerCase();
+                        const esRiesgoAlto = item.confiabilidad_score < 0.75;
+                        const excedePresupuesto = Boolean(
+                          item.excede_presupuesto ||
+                            (presNum !== null && item.costo_total > presNum)
+                        );
+
+                        return (
+                          <div
+                            key={`${item.tienda}-${idx}`}
+                            className={`bg-white/85 backdrop-blur-xl rounded-3xl p-5 border transition-all duration-300 relative flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 ${
+                              esRecomendada
+                                ? "border-indigo-400 ring-2 ring-indigo-500/15 shadow-indigo-500/5"
+                                : esRiesgoAlto
+                                ? "border-rose-300 bg-rose-50/20"
+                                : "border-slate-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.03)]"
+                            }`}
+                          >
+                            <div className="space-y-3.5">
+                              {/* Header de la tarjeta */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-slate-100 to-indigo-50 text-indigo-700 font-extrabold flex items-center justify-center text-xs border border-indigo-100">
+                                      {item.tienda.charAt(item.tienda.length - 1)}
+                                    </div>
+                                    <h4 className="font-bold text-base text-slate-900">
+                                      {item.tienda}
+                                    </h4>
+                                    {esRecomendada && (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                                        ★ Sugerida
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-slate-600 line-clamp-1 mt-1 font-medium">
+                                    {item.producto}
+                                  </span>
+                                </div>
+                                <div className="shrink-0">
+                                  {renderBadgeConfiabilidad(item.confiabilidad_score)}
+                                </div>
+                              </div>
+
+                              {/* Breakdown de Precio y Costo Total en Pastel */}
+                              <div className="p-3.5 bg-gradient-to-r from-slate-50 to-indigo-50/30 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                <div>
+                                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                    Precio Base
+                                  </div>
+                                  <div className="text-sm font-semibold text-slate-800">
+                                    S/ {item.precio.toFixed(2)}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                    Flete Est.
+                                  </div>
+                                  <div className="text-sm font-semibold text-slate-800">
+                                    {item.envio === 0 ? (
+                                      <span className="text-emerald-600 font-bold">Gratis</span>
+                                    ) : (
+                                      `S/ ${item.envio.toFixed(2)}`
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right border-l border-slate-200/80 pl-3.5">
+                                  <div className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">
+                                    Costo Total
+                                  </div>
+                                  <div
+                                    className={`text-lg font-black ${
+                                      excedePresupuesto ? "text-rose-600" : "text-indigo-950"
+                                    }`}
+                                  >
+                                    S/ {item.costo_total.toFixed(2)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Tags de atributos */}
+                              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                                <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-lg font-semibold">
+                                  ⏱️ {item.tiempo_entrega_dias} {item.tiempo_entrega_dias === 1 ? "día" : "días"}
+                                </span>
+                                {item.empresa_transporte && (
+                                  <span className="bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-indigo-200/60 font-semibold">
+                                    🚚 {item.empresa_transporte}
+                                  </span>
+                                )}
+                                {item.garantia && (
+                                  <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-lg font-semibold">
+                                    🛡️ {item.garantia}
+                                  </span>
+                                )}
+                                {item.reputacion !== null && item.reputacion !== undefined && (
+                                  <span className="bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-lg border border-amber-200/70 font-semibold">
+                                    ★ Rep: {item.reputacion}
+                                  </span>
+                                )}
+                                {excedePresupuesto && (
+                                  <span className="bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-lg border border-rose-200 font-semibold">
+                                    Excede presupuesto
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Botones de acción con micro-interacción */}
+                            <div className="flex items-center gap-2 pt-4 mt-3 border-t border-slate-100">
+                              <button
+                                type="button"
+                                onClick={() => setTiendaSeleccionadaModal(item)}
+                                className="flex-1 py-2.5 px-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200/80 transition-all cursor-pointer text-center shadow-2xs hover:shadow-xs"
+                              >
+                                Ver Detalle
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  manejarAccionComprar(
+                                    item.tienda,
+                                    item.producto,
+                                    item.costo_total,
+                                    item.link
+                                  )
+                                }
+                                className="flex-1 py-2.5 px-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:via-indigo-700 hover:to-violet-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow-md hover:shadow-indigo-500/20 transition-all cursor-pointer text-center active:scale-95"
+                              >
+                                Ver Oferta
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* VISTA 2: TABLA MATRICIAL COMPLETA */}
+                  {modoVista === "tabla" && (
+                    <div className="bg-white/85 backdrop-blur-xl rounded-3xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm text-slate-700">
+                          <thead className="bg-slate-100/80 text-xs uppercase font-bold text-slate-700 border-b border-slate-200 select-none">
+                            <tr>
+                              <th
+                                onClick={() => alternarColumna("tienda")}
+                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition"
+                              >
+                                <div className="flex items-center gap-1">
+                                  Tienda
+                                  {columnaOrden === "tienda" && (direccionOrden === "asc" ? " ▲" : " ▼")}
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => alternarColumna("producto")}
+                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition"
+                              >
+                                <div className="flex items-center gap-1">
+                                  Producto
+                                  {columnaOrden === "producto" && (direccionOrden === "asc" ? " ▲" : " ▼")}
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => alternarColumna("precio")}
+                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition text-right"
+                              >
+                                <div className="flex items-center justify-end gap-1">
+                                  Precio
+                                  {columnaOrden === "precio" && (direccionOrden === "asc" ? " ▲" : " ▼")}
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => alternarColumna("envio")}
+                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition text-right"
+                              >
+                                <div className="flex items-center justify-end gap-1">
+                                  Envío (Est.)
+                                  {columnaOrden === "envio" && (direccionOrden === "asc" ? " ▲" : " ▼")}
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => alternarColumna("costo_total")}
+                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition text-right font-extrabold text-slate-900"
+                              >
+                                <div className="flex items-center justify-end gap-1">
+                                  Costo Total
+                                  {columnaOrden === "costo_total" && (direccionOrden === "asc" ? " ▲" : " ▼")}
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => alternarColumna("tiempo_entrega_dias")}
+                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition text-center"
+                              >
+                                <div className="flex items-center justify-center gap-1">
+                                  Entrega
+                                  {columnaOrden === "tiempo_entrega_dias" && (direccionOrden === "asc" ? " ▲" : " ▼")}
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => alternarColumna("confiabilidad_score")}
+                                className="py-3.5 px-4 cursor-pointer hover:text-indigo-600 transition text-center"
+                              >
+                                <div className="flex items-center justify-center gap-1">
+                                  Confiabilidad
+                                  {columnaOrden === "confiabilidad_score" && (direccionOrden === "asc" ? " ▲" : " ▼")}
+                                </div>
+                              </th>
+                              <th className="py-3.5 px-4 text-center">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {resultadosMostrados.map((tiendaItem, idx) => {
+                              const esRecomendada =
+                                datos.recomendacion?.tienda &&
+                                tiendaItem.tienda.trim().toLowerCase() ===
+                                  datos.recomendacion.tienda.trim().toLowerCase();
+                              const esRiesgoAlto = tiendaItem.confiabilidad_score < 0.75;
+                              const excedePresupuesto = Boolean(
+                                tiendaItem.excede_presupuesto ||
+                                  (presNum !== null && tiendaItem.costo_total > presNum)
+                              );
+
+                              return (
+                                <tr
+                                  key={`${tiendaItem.tienda}-${idx}`}
+                                  className={`transition ${
+                                    esRiesgoAlto
+                                      ? "opacity-75 bg-rose-50/40 hover:opacity-100"
+                                      : excedePresupuesto
+                                      ? "opacity-75 bg-slate-50/50 hover:opacity-100"
+                                      : "hover:bg-slate-50/80"
+                                  } ${esRecomendada ? "bg-indigo-50/30 border-l-4 border-l-indigo-600" : ""}`}
+                                >
+                                  <td className="py-4 px-4 font-semibold text-slate-900">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <span>{tiendaItem.tienda}</span>
+                                        {esRecomendada && (
+                                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                                            ★ Rec.
+                                          </span>
+                                        )}
+                                      </div>
+                                      {tiendaItem.reputacion !== null &&
+                                        tiendaItem.reputacion !== undefined &&
+                                        String(tiendaItem.reputacion).trim() !== "" && (
+                                          <div className="text-[11px] text-amber-700 font-medium">
+                                            ★ Rep: {tiendaItem.reputacion}
+                                          </div>
+                                        )}
+                                    </div>
+                                  </td>
+
+                                  <td className="py-4 px-4 text-slate-700 max-w-xs">
+                                    <div className="space-y-1">
+                                      <span
+                                        className="font-medium text-slate-900 line-clamp-2 block"
+                                        title={tiendaItem.producto}
+                                      >
+                                        {tiendaItem.producto}
+                                      </span>
+                                      {tiendaItem.garantia && (
+                                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md font-semibold">
+                                          🛡️ {tiendaItem.garantia}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+
+                                  <td className="py-4 px-4 text-right font-medium text-slate-700 whitespace-nowrap">
+                                    S/ {tiendaItem.precio.toFixed(2)}
+                                  </td>
+
+                                  <td className="py-4 px-4 text-right whitespace-nowrap">
+                                    <div>
+                                      {tiendaItem.envio === 0 ? (
+                                        <span className="text-emerald-700 font-bold text-xs bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200/60">
+                                          Gratis
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-700 font-medium text-xs">
+                                          S/ {tiendaItem.envio.toFixed(2)}
+                                        </span>
+                                      )}
+                                      {tiendaItem.empresa_transporte && (
+                                        <div className="text-[10px] text-slate-500 font-normal mt-0.5">
+                                          vía {tiendaItem.empresa_transporte}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+
+                                  <td className="py-4 px-4 text-right font-extrabold text-base whitespace-nowrap">
+                                    <span
+                                      className={
+                                        excedePresupuesto
+                                          ? "text-rose-600 line-through text-sm"
+                                          : "text-slate-900"
+                                      }
+                                    >
+                                      S/ {tiendaItem.costo_total.toFixed(2)}
+                                    </span>
+                                    {excedePresupuesto && (
+                                      <div className="mt-0.5">
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-50 text-rose-600 border border-rose-200">
+                                          Excede presupuesto
+                                        </span>
+                                      </div>
+                                    )}
+                                  </td>
+
+                                  <td className="py-4 px-4 text-center whitespace-nowrap">
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700">
+                                      {tiendaItem.tiempo_entrega_dias}{" "}
+                                      {tiendaItem.tiempo_entrega_dias === 1 ? "día" : "días"}
+                                    </span>
+                                  </td>
+
+                                  <td className="py-4 px-4 text-center whitespace-nowrap">
+                                    {renderBadgeConfiabilidad(tiendaItem.confiabilidad_score)}
+                                  </td>
+
+                                  <td className="py-4 px-4 text-center whitespace-nowrap">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => setTiendaSeleccionadaModal(tiendaItem)}
+                                        className="p-2 text-slate-500 hover:text-indigo-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+                                        title="Ver detalles"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          manejarAccionComprar(
+                                            tiendaItem.tienda,
+                                            tiendaItem.producto,
+                                            tiendaItem.costo_total,
+                                            tiendaItem.link
+                                          )
+                                        }
+                                        className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs transition inline-flex items-center gap-1 cursor-pointer active:scale-95"
+                                      >
+                                        <span>Oferta</span>
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rotulación y Notas */}
+                  <div className="p-4 bg-white/70 backdrop-blur-md rounded-2xl border border-slate-200/80 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-2xs">
+                    <span>
+                      * Costos de flete y plazos son valores estimados referenciales para fines de demostración académica y comparativa.
+                    </span>
+                    <span className="font-bold text-slate-700">
+                      Plaza evaluada: {ubicacion.ciudad}, {ubicacion.departamento}
+                    </span>
+                  </div>
+                </div>
+
+                {/* ========================================================================= */}
+                {/* MÓDULO DE ENVÍO DE RESULTADOS (TELEGRAM / EMAIL) */}
+                {/* ========================================================================= */}
+                <section className="bg-white/85 backdrop-blur-xl rounded-3xl p-6 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4 ring-1 ring-slate-900/5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Enviar Reporte de Resultados
                       </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Filtro de servidor activo: <strong className="text-blue-700 uppercase">{prioridad}</strong>
-                        {columnaOrden && ` • Reordenado por columna: ${columnaOrden}`}
+                      <p className="text-xs text-slate-500">
+                        Recibe la síntesis de esta comparación directamente en tu canal preferido mediante n8n.
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {presupuestoMaximo && (
-                        <span className="text-xs bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 font-medium">
-                          Presupuesto límite: <strong className="text-slate-900">S/ {Number(presupuestoMaximo).toFixed(2)}</strong>
-                        </span>
-                      )}
+                    {/* Selector de Canal */}
+                    <div className="inline-flex rounded-xl p-1 bg-slate-100/80 border border-slate-200/80 text-xs shadow-inner">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCanalEnvio("telegram");
+                          setMensajeEnvio(null);
+                        }}
+                        className={`px-3.5 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                          canalEnvio === "telegram"
+                            ? "bg-white text-indigo-700 shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5 text-sky-500" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+                        </svg>
+                        Telegram
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCanalEnvio("email");
+                          setMensajeEnvio(null);
+                        }}
+                        className={`px-3.5 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                          canalEnvio === "email"
+                            ? "bg-white text-indigo-700 shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Correo (Resend)
+                      </button>
                     </div>
                   </div>
 
-                  {/* Tabla interactiva con mitigación de tiendas de riesgo */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-slate-700">
-                      <thead className="bg-slate-100/90 text-xs uppercase font-bold text-slate-700 border-b border-slate-200 select-none">
-                        <tr>
-                          <th
-                            onClick={() => alternarColumna("tienda")}
-                            className="py-3.5 px-4 cursor-pointer hover:text-blue-600 transition"
-                          >
-                            <div className="flex items-center gap-1">
-                              Tienda
-                              {columnaOrden === "tienda" && (direccionOrden === "asc" ? " ▲" : " ▼")}
-                            </div>
-                          </th>
-                          <th
-                            onClick={() => alternarColumna("producto")}
-                            className="py-3.5 px-4 cursor-pointer hover:text-blue-600 transition"
-                          >
-                            <div className="flex items-center gap-1">
-                              Producto
-                              {columnaOrden === "producto" && (direccionOrden === "asc" ? " ▲" : " ▼")}
-                            </div>
-                          </th>
-                          <th
-                            onClick={() => alternarColumna("precio")}
-                            className="py-3.5 px-4 cursor-pointer hover:text-blue-600 transition text-right"
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Precio
-                              {columnaOrden === "precio" && (direccionOrden === "asc" ? " ▲" : " ▼")}
-                            </div>
-                          </th>
-                          <th
-                            onClick={() => alternarColumna("envio")}
-                            className="py-3.5 px-4 cursor-pointer hover:text-blue-600 transition text-right"
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Envío
-                              {columnaOrden === "envio" && (direccionOrden === "asc" ? " ▲" : " ▼")}
-                            </div>
-                          </th>
-                          <th
-                            onClick={() => alternarColumna("costo_total")}
-                            className="py-3.5 px-4 cursor-pointer hover:text-blue-600 transition text-right font-extrabold text-slate-900"
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Costo Total
-                              {columnaOrden === "costo_total" && (direccionOrden === "asc" ? " ▲" : " ▼")}
-                            </div>
-                          </th>
-                          <th
-                            onClick={() => alternarColumna("tiempo_entrega_dias")}
-                            className="py-3.5 px-4 cursor-pointer hover:text-blue-600 transition text-center"
-                          >
-                            <div className="flex items-center justify-center gap-1">
-                              Entrega
-                              {columnaOrden === "tiempo_entrega_dias" && (direccionOrden === "asc" ? " ▲" : " ▼")}
-                            </div>
-                          </th>
-                          {/* Columna Confiabilidad con Mitigación de Riesgo */}
-                          <th
-                            onClick={() => alternarColumna("confiabilidad_score")}
-                            className="py-3.5 px-4 cursor-pointer hover:text-blue-600 transition text-center"
-                          >
-                            <div className="flex items-center justify-center gap-1">
-                              Confiabilidad
-                              {columnaOrden === "confiabilidad_score" && (direccionOrden === "asc" ? " ▲" : " ▼")}
-                            </div>
-                          </th>
-                          <th className="py-3.5 px-4 text-center">
-                            Acción
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {resultadosMostrados.map((tiendaItem, idx) => {
-                          const esGanadora = idx === 0;
-                          const esRiesgoAlto = tiendaItem.confiabilidad_score < 0.75;
-                          const excedePresupuesto = Boolean(tiendaItem.excede_presupuesto);
+                  <form onSubmit={manejarEnviarResultados} className="space-y-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          {canalEnvio === "telegram"
+                            ? "Chat ID de Telegram (numérico)"
+                            : "Correo Electrónico Verificado"}
+                        </label>
+                        <input
+                          type={canalEnvio === "telegram" ? "text" : "email"}
+                          value={destinoEnvio}
+                          onChange={(e) => setDestinoEnvio(e.target.value)}
+                          placeholder={
+                            canalEnvio === "telegram"
+                              ? "Ej. 583921829"
+                              : "tu-correo-verificado@ejemplo.com"
+                          }
+                          disabled={enviandoResultados}
+                          className="w-full px-4 py-2.5 bg-slate-50/80 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
+                        />
+                      </div>
 
-                          return (
-                            <tr
-                              key={`${tiendaItem.tienda}-${idx}`}
-                              className={`transition ${
-                                esRiesgoAlto
-                                  ? "opacity-70 bg-rose-50/40 hover:opacity-100"
-                                  : excedePresupuesto
-                                  ? "opacity-75 bg-slate-50/50 hover:opacity-100"
-                                  : "hover:bg-slate-50/80"
-                              } ${esGanadora ? "bg-blue-50/30 border-l-4 border-l-blue-600" : ""}`}
-                            >
-                              {/* Tienda */}
-                              <td className="py-4 px-4 font-semibold text-slate-900">
-                                <div className="flex items-center gap-2">
-                                  <span>{tiendaItem.tienda}</span>
-                                  {esGanadora && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                                      ★ Ganadora
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-
-                              {/* Producto */}
-                              <td className="py-4 px-4 text-slate-600">
-                                {tiendaItem.producto}
-                              </td>
-
-                              {/* Precio con S/ */}
-                              <td className="py-4 px-4 text-right font-medium text-slate-700">
-                                S/ {tiendaItem.precio.toFixed(2)}
-                              </td>
-
-                              {/* Envío */}
-                              <td className="py-4 px-4 text-right">
-                                {tiendaItem.envio === 0 ? (
-                                  <span className="text-emerald-700 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                    Gratis
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-600 font-medium">
-                                    S/ {tiendaItem.envio.toFixed(2)}
-                                  </span>
-                                )}
-                              </td>
-
-                              {/* Costo Total */}
-                              <td className="py-4 px-4 text-right font-extrabold text-base">
-                                <span
-                                  className={
-                                    excedePresupuesto
-                                      ? "text-rose-600 line-through text-sm"
-                                      : "text-slate-900"
-                                  }
-                                >
-                                  S/ {tiendaItem.costo_total.toFixed(2)}
-                                </span>
-                                {excedePresupuesto && (
-                                  <div className="mt-0.5">
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-50 text-rose-600 border border-rose-200">
-                                      Excede presupuesto
-                                    </span>
-                                  </div>
-                                )}
-                              </td>
-
-                              {/* Tiempo de entrega */}
-                              <td className="py-4 px-4 text-center">
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
-                                  {tiendaItem.tiempo_entrega_dias}{" "}
-                                  {tiendaItem.tiempo_entrega_dias === 1 ? "día" : "días"}
-                                </span>
-                              </td>
-
-                              {/* Confiabilidad con Mitigación de Tiendas poco Confiables */}
-                              <td className="py-4 px-4 text-center">
-                                {renderBadgeConfiabilidad(tiendaItem.confiabilidad_score)}
-                              </td>
-
-                              {/* Botón de Acción 'Ver Oferta' / 'Comprar' Azul Corporativo Sólido */}
-                              <td className="py-4 px-4 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    manejarAccionComprar(
-                                      tiendaItem.tienda,
-                                      tiendaItem.producto,
-                                      tiendaItem.costo_total,
-                                      tiendaItem.link
-                                    )
-                                  }
-                                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs hover:shadow-md transition-all cursor-pointer inline-flex items-center gap-1"
-                                >
-                                  <span>Ver Oferta</span>
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                  </svg>
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Footer de la tabla con Detalle del Snapshot de Datos (Sección 5.3) */}
-                  <div className="p-4 bg-slate-50 border-t border-slate-100 space-y-1.5">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-                      <span>
-                        * Todos los montos se muestran en Soles peruanos (S/) e incluyen IGV y flete oficial.
-                      </span>
-                      <span className="font-medium text-slate-600">
-                        Entregas calculadas para: {ubicacion.ciudad}, {ubicacion.departamento}
-                      </span>
+                      <div className="sm:self-end">
+                        <button
+                          type="submit"
+                          disabled={enviandoResultados || !destinoEnvio.trim()}
+                          className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:via-indigo-700 hover:to-violet-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/35 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-95"
+                        >
+                          {enviandoResultados ? (
+                            <>
+                              <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                              <span>Enviando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Enviar Reporte</span>
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                              </svg>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    {/* Texto específico de la Sección 5.3 del informe académico */}
-                    <p className="text-slate-400 text-xs text-center sm:text-left pt-1 border-t border-slate-200/60">
-                      Nota: Mostrando snapshot de datos optimizado para Trujillo. Fuentes verificadas: MercadoLibre API y SerpAPI
-                    </p>
-                  </div>
+
+                    {canalEnvio === "telegram" && (
+                      <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50/80 p-3 rounded-2xl border border-slate-200">
+                        <strong className="text-slate-800">Requisito para Telegram:</strong> Ingresa tu{" "}
+                        <span className="font-semibold text-indigo-700">Chat ID numérico</span> (no tu @usuario).
+                        Debes haber iniciado conversación al menos una vez con el bot de Telegram de n8n para permitir la entrega.
+                      </p>
+                    )}
+
+                    {canalEnvio === "email" && (
+                      <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50/80 p-3 rounded-2xl border border-slate-200">
+                        <strong className="text-slate-800">Nota para Email (Resend):</strong> En entornos de prueba,
+                        la entrega solo se garantiza hacia el correo del propietario registrado en la cuenta de Resend.
+                      </p>
+                    )}
+
+                    {mensajeEnvio && (
+                      <div
+                        className={`p-3.5 rounded-2xl text-xs flex items-center gap-2 ${
+                          mensajeEnvio.tipo === "exito"
+                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                            : "bg-rose-50 text-rose-800 border border-rose-200"
+                        }`}
+                      >
+                        {mensajeEnvio.tipo === "exito" ? (
+                          <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        )}
+                        <span>{mensajeEnvio.texto}</span>
+                      </div>
+                    )}
+                  </form>
                 </section>
 
               </div>
@@ -1022,6 +1920,110 @@ export default function Home() {
 
           </div>
         </div>
+
+        {/* ========================================================================= */}
+        {/* MODAL INTERACTIVO: DESGLOSE TÉCNICO DE LA TIENDA */}
+        {/* ========================================================================= */}
+        {tiendaSeleccionadaModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md animate-in fade-in">
+            <div className="bg-white/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-white/80 space-y-5 animate-in zoom-in-95 ring-1 ring-slate-900/10">
+              <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-indigo-700 tracking-wider">
+                    Ficha Técnica de Proveedor
+                  </span>
+                  <h3 className="text-xl font-black text-slate-900">
+                    {tiendaSeleccionadaModal.tienda}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTiendaSeleccionadaModal(null)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold transition cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div>
+                  <span className="text-slate-500 font-semibold">Producto evaluado:</span>
+                  <p className="font-bold text-slate-900 text-sm mt-0.5">
+                    {tiendaSeleccionadaModal.producto}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50/80 rounded-2xl border border-slate-100">
+                  <div>
+                    <span className="text-slate-500 font-medium">Precio base:</span>
+                    <p className="font-bold text-slate-900 text-sm">
+                      S/ {tiendaSeleccionadaModal.precio.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-medium">Flete logístico:</span>
+                    <p className="font-bold text-slate-900 text-sm">
+                      {tiendaSeleccionadaModal.envio === 0
+                        ? "Gratis (0.00)"
+                        : `S/ ${tiendaSeleccionadaModal.envio.toFixed(2)}`}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-medium">Transporte asignado:</span>
+                    <p className="font-bold text-slate-900">
+                      {tiendaSeleccionadaModal.empresa_transporte || "Transporte no especificado"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-medium">Tiempo de entrega:</span>
+                    <p className="font-bold text-slate-900">
+                      {tiendaSeleccionadaModal.tiempo_entrega_dias} días hábiles
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-medium">Garantía declarada:</span>
+                    <p className="font-bold text-slate-900">
+                      {tiendaSeleccionadaModal.garantia || "Sin garantía registrada"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-medium">Score Confiabilidad:</span>
+                    <p className="font-bold text-slate-900">
+                      {Math.round(tiendaSeleccionadaModal.confiabilidad_score * 100)}% (
+                      {tiendaSeleccionadaModal.confiabilidad_score < 0.75 ? "Riesgo" : "Seguro"})
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50/60 border border-indigo-100 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] text-indigo-700 font-bold uppercase tracking-wider">
+                      Costo Total Evaluado
+                    </div>
+                    <div className="text-xl font-black text-indigo-950">
+                      S/ {tiendaSeleccionadaModal.costo_total.toFixed(2)}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      manejarAccionComprar(
+                        tiendaSeleccionadaModal.tienda,
+                        tiendaSeleccionadaModal.producto,
+                        tiendaSeleccionadaModal.costo_total,
+                        tiendaSeleccionadaModal.link
+                      );
+                      setTiendaSeleccionadaModal(null);
+                    }}
+                    className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+                  >
+                    Abrir Oferta Externa
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       </main>
     </div>
