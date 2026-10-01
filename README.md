@@ -49,8 +49,9 @@ Aplicación web profesional para evaluar y comparar productos eléctricos en tie
 | --- | --- |
 | `N8N_WEBHOOK_URL` | URL del webhook de n8n en Railway que recibe las consultas de búsqueda. |
 | `N8N_ENVIAR_URL` | URL del webhook de n8n en Railway para el envío de resultados vía Telegram o Resend (Email). |
+| `NEXT_PUBLIC_ENABLE_DEMO_CONTROLS` | Opcional. Usa `true` solo para mostrar controles visuales de riesgo y caché durante una demostración. Por defecto debe quedar en `false`. |
 
-> **Nota para despliegue (Vercel, Railway, etc.):** Recuerda cargar ambas variables en el panel de configuración de variables de entorno de tu hosting. Las funciones API incluyen una configuración de `maxDuration` para admitir flujos de búsqueda de 1 a 2 minutos sin interrupción.
+> **Nota para despliegue (Vercel, Railway, etc.):** Carga las dos variables de webhook en el panel de configuración de tu hosting. La variable de controles de demostración es opcional; déjala en `false` para que no aparezcan en la interfaz normal. Las funciones API incluyen una configuración de `maxDuration` para admitir flujos de búsqueda de 1 a 2 minutos sin interrupción.
 
 ## Comandos disponibles
 

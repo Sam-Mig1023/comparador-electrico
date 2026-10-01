@@ -308,7 +308,7 @@ export default function Home() {
     setDatos((prev) => (prev ? { ...prev, riesgo_detectado: !prev.riesgo_detectado } : null));
     mostrarToast(
       !datos.riesgo_detectado
-        ? "⚠️ Alerta de riesgo simulada activada."
+        ? "Alerta de riesgo simulada activada."
         : "Alerta de riesgo desactivada."
     );
   };
@@ -318,17 +318,14 @@ export default function Home() {
     setDatos((prev) => (prev ? { ...prev, desde_cache: !prev.desde_cache } : null));
     mostrarToast(
       !datos.desde_cache
-        ? "⚡ Indicador de datos en caché activado."
+        ? "Indicador de datos en caché simulado activado."
         : "Indicador de caché desactivado."
     );
   };
 
-  // Disparar búsqueda al cambiar de prioridad
-  const cambiarPrioridadYBuscar = (nuevaPrioridad: TipoPrioridad) => {
+  // Actualizar la prioridad; la búsqueda se envía al confirmar el formulario
+  const cambiarPrioridad = (nuevaPrioridad: TipoPrioridad) => {
     setPrioridad(nuevaPrioridad);
-    if (consulta.trim()) {
-      ejecutarBusqueda(consulta, ubicacion, nuevaPrioridad, presupuestoMaximo);
-    }
   };
 
   const manejarSubmit = (e: React.FormEvent) => {
@@ -347,7 +344,6 @@ export default function Home() {
     setUbicacion(ubiEncontrada);
     setPrioridad(item.prioridad || "balanceado");
     setError(null);
-    ejecutarBusqueda(item.consulta, ubiEncontrada, item.prioridad);
   };
 
   // Ordenar columnas en la tabla
@@ -698,9 +694,6 @@ export default function Home() {
                       );
                       if (seleccionada) {
                         setUbicacion(seleccionada);
-                        if (consulta.trim()) {
-                          ejecutarBusqueda(consulta, seleccionada, prioridad, presupuestoMaximo);
-                        }
                       }
                     }}
                     disabled={cargando}
@@ -798,7 +791,7 @@ export default function Home() {
                 <div className="flex flex-col gap-1.5">
                   <button
                     type="button"
-                    onClick={() => cambiarPrioridadYBuscar("balanceado")}
+                    onClick={() => cambiarPrioridad("balanceado")}
                     disabled={cargando}
                     className={`w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                       prioridad === "balanceado"
@@ -819,7 +812,7 @@ export default function Home() {
 
                   <button
                     type="button"
-                    onClick={() => cambiarPrioridadYBuscar("costo")}
+                    onClick={() => cambiarPrioridad("costo")}
                     disabled={cargando}
                     className={`w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                       prioridad === "costo"
@@ -840,7 +833,7 @@ export default function Home() {
 
                   <button
                     type="button"
-                    onClick={() => cambiarPrioridadYBuscar("envio")}
+                    onClick={() => cambiarPrioridad("envio")}
                     disabled={cargando}
                     className={`w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                       prioridad === "envio"
@@ -861,7 +854,7 @@ export default function Home() {
 
                   <button
                     type="button"
-                    onClick={() => cambiarPrioridadYBuscar("reputacion")}
+                    onClick={() => cambiarPrioridad("reputacion")}
                     disabled={cargando}
                     className={`w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                       prioridad === "reputacion"
@@ -882,39 +875,43 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Botones de prueba para simular banderas de sustentación */}
-              {datos && (
-                <div className="pt-3 border-t border-slate-100 space-y-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-                    Modos de Sustentación
-                  </span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={alternarRiesgoSimulado}
-                      className={`text-xs py-1.5 px-2 rounded-xl font-bold border transition cursor-pointer ${
-                        datos.riesgo_detectado
-                          ? "bg-rose-100 text-rose-800 border-rose-300 shadow-2xs"
-                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      {datos.riesgo_detectado ? "⚠️ Riesgo ON" : "Probar Riesgo"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={alternarCacheSimulado}
-                      className={`text-xs py-1.5 px-2 rounded-xl font-bold border transition cursor-pointer ${
-                        datos.desde_cache
-                          ? "bg-indigo-100 text-indigo-800 border-indigo-300 shadow-2xs"
-                          : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      {datos.desde_cache ? "⚡ Caché ON" : "Probar Caché"}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Controles de demostración: visibles solo al activar la variable de entorno */}
+            {datos && process.env.NEXT_PUBLIC_ENABLE_DEMO_CONTROLS === "true" && (
+              <section className="bg-slate-50/80 rounded-2xl border border-dashed border-slate-300 p-4 space-y-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Modo demostración</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Simula indicadores en pantalla; no vuelve a consultar n8n.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={alternarRiesgoSimulado}
+                    className={`text-xs py-2 px-3 rounded-xl font-bold border transition cursor-pointer ${
+                      datos.riesgo_detectado
+                        ? "bg-rose-100 text-rose-800 border-rose-300"
+                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    {datos.riesgo_detectado ? "Quitar riesgo" : "Simular riesgo"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={alternarCacheSimulado}
+                    className={`text-xs py-2 px-3 rounded-xl font-bold border transition cursor-pointer ${
+                      datos.desde_cache
+                        ? "bg-indigo-100 text-indigo-800 border-indigo-300"
+                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    {datos.desde_cache ? "Quitar caché" : "Simular caché"}
+                  </button>
+                </div>
+              </section>
+            )}
 
             {/* Búsquedas Recientes */}
             {historialHidratado && busquedasRecientes.length > 0 && (
@@ -1039,7 +1036,6 @@ export default function Home() {
                       type="button"
                       onClick={() => {
                         setConsulta(ejemplo);
-                        ejecutarBusqueda(ejemplo);
                       }}
                       disabled={cargando}
                       className="px-3 py-1 rounded-xl bg-slate-100/80 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200/80 text-slate-600 transition-all font-medium cursor-pointer"
