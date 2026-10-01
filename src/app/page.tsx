@@ -127,15 +127,9 @@ export default function Home() {
   const [tiendaSeleccionadaModal, setTiendaSeleccionadaModal] = useState<ResultadoTienda | null>(null);
 
   // Historial en localStorage
-  const [busquedasRecientes, setBusquedasRecientes] = useState<BusquedaReciente[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const guardadas = localStorage.getItem("comprasmart_busquedas_recientes");
-      return guardadas ? JSON.parse(guardadas) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Historial en localStorage
+  const [busquedasRecientes, setBusquedasRecientes] = useState<BusquedaReciente[]>([]);
+  const [historialHidratado, setHistorialHidratado] = useState(false);
 
   // Estados para el módulo de envío de resultados (Telegram / Email)
   const [canalEnvio, setCanalEnvio] = useState<CanalEnvio>("telegram");
@@ -155,6 +149,20 @@ export default function Home() {
     }, 1000);
     return () => clearInterval(intervalo);
   }, [cargando]);
+  // Cargar el historial después del primer render para evitar errores de hidratación
+  useEffect(() => {
+    try {
+      const guardadas = localStorage.getItem("comprasmart_busquedas_recientes");
+
+      if (guardadas) {
+        setBusquedasRecientes(JSON.parse(guardadas));
+      }
+    } catch {
+      // Ignorar datos ilegibles o fallas de lectura
+    } finally {
+      setHistorialHidratado(true);
+    }
+  }, []);
 
   // Mensaje progresivo según el tiempo transcurrido
   const mensajeCargaActual = useMemo(() => {
@@ -917,15 +925,26 @@ export default function Home() {
             </div>
 
             {/* Búsquedas Recientes */}
-            {busquedasRecientes.length > 0 && (
+            {historialHidratado && busquedasRecientes.length > 0 && (
               <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-3 ring-1 ring-slate-900/5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-3.5 h-3.5 text-indigo-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                     Historial
                   </h3>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -939,6 +958,7 @@ export default function Home() {
                     Limpiar
                   </button>
                 </div>
+
                 <div className="space-y-1">
                   {busquedasRecientes.map((reciente, idx) => (
                     <button
