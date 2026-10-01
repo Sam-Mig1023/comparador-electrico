@@ -790,10 +790,10 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Selector de Criterio de Prioridad */}
+              {/* Selector de preferencia de compra */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
                 <label className="block text-xs font-bold text-slate-700">
-                  Criterio de Ponderación
+                  ¿Qué prefieres priorizar?
                 </label>
                 <div className="flex flex-col gap-1.5">
                   <button
@@ -808,7 +808,7 @@ export default function Home() {
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
-                      <span>Balanceado (Multicriterio)</span>
+                      <span className="min-w-0 leading-snug">Equilibrio entre precio, entrega y confianza</span>
                     </div>
                     {prioridad === "balanceado" && (
                       <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-100/80 font-bold text-indigo-700">
@@ -829,7 +829,7 @@ export default function Home() {
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
-                      <span>Menor Costo Total</span>
+                      <span>Menor costo total</span>
                     </div>
                     {prioridad === "costo" && (
                       <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-100/80 font-bold text-emerald-700">
@@ -850,7 +850,7 @@ export default function Home() {
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-sky-600" />
-                      <span>Menor Tiempo de Entrega</span>
+                      <span>Entrega más rápida</span>
                     </div>
                     {prioridad === "envio" && (
                       <span className="text-xs px-2 py-0.5 rounded-md bg-sky-100/80 font-bold text-sky-700">
@@ -871,7 +871,7 @@ export default function Home() {
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                      <span>Mayor Reputación</span>
+                      <span>Mayor reputación de la tienda</span>
                     </div>
                     {prioridad === "reputacion" && (
                       <span className="text-xs px-2 py-0.5 rounded-md bg-amber-100/80 font-bold text-amber-700">
