@@ -1,0 +1,65 @@
+{
+  "producto_buscado": "teclado mecánico inalámbrico",
+  "categoria": "Periféricos y Computación",
+  "tipo": "Hardware",
+  "desde_cache": false,
+  "riesgo_detectado": false,
+  "resultados": [
+    {
+      "tienda": "Tienda D",
+      "producto": "Modelo X Pro Inalámbrico",
+      "link": "https://tiendad.com/producto/modelo-x",
+      "precio": 225,
+      "envio": 15,
+      "empresa_transporte": "Olva Courier",
+      "costo_total": 240,
+      "tiempo_entrega_dias": 2,
+      "garantia": "2 años",
+      "reputacion": 4.7,
+      "confiabilidad_score": 0.91
+    },
+    {
+      "tienda": "Tienda A",
+      "producto": "Modelo X Estándar",
+      "link": "https://tiendaa.com/producto/modelo-x",
+      "precio": 250,
+      "envio": 0,
+      "empresa_transporte": "Envío Propio Express",
+      "costo_total": 250,
+      "tiempo_entrega_dias": 2,
+      "garantia": "1 año",
+      "reputacion": "4.8 / 5",
+      "confiabilidad_score": 0.88
+    },
+    {
+      "tienda": "Tienda B",
+      "producto": "Modelo X Gamer RGB",
+      "link": "https://tiendab.com/producto/modelo-x",
+      "precio": 210,
+      "envio": 25,
+      "empresa_transporte": "Shalom",
+      "costo_total": 235,
+      "tiempo_entrega_dias": 4,
+      "garantia": null,
+      "reputacion": 4.5,
+      "confiabilidad_score": 0.82
+    },
+    {
+      "tienda": "Tienda C",
+      "producto": "Modelo X Outlet",
+      "link": "https://tiendac.com/producto/modelo-x",
+      "precio": 190,
+      "envio": 40,
+      "empresa_transporte": null,
+      "costo_total": 230,
+      "tiempo_entrega_dias": 5,
+      "garantia": "6 meses",
+      "reputacion": null,
+      "confiabilidad_score": 0.65
+    }
+  ],
+  "recomendacion": {
+    "tienda": "Tienda D",
+    "motivo": "Aunque no tiene el precio más bajo, presenta el mejor equilibrio entre costo total estimado, garantía oficial, tiempo de entrega y reputación verificada en Trujillo."
+  }
+}

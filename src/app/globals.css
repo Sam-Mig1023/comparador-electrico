@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+:root {
+  --font-plus-jakarta: var(--font-plus-jakarta);
+}
+
+@theme inline {
+  --font-sans: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
+}
+
+body {
+  font-family: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
+}
+
+/* Patrón de puntos sutil de fondo para estilo Enterprise SaaS */
+.bg-grid-pattern {
+  background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
