@@ -1431,26 +1431,28 @@ export default function Home() {
                             <div className="space-y-3.5">
                               {/* Header de la tarjeta */}
                               <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-slate-100 to-indigo-50 text-indigo-700 font-extrabold flex items-center justify-center text-xs border border-indigo-100">
-                                      {item.tienda.charAt(item.tienda.length - 1)}
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-7 h-7 shrink-0 rounded-lg bg-gradient-to-tr from-slate-100 to-indigo-50 text-indigo-700 font-extrabold flex items-center justify-center text-xs border border-indigo-100">
+                                      {item.tienda.charAt(0).toUpperCase()}
                                     </div>
-                                    <h4 className="font-bold text-base text-slate-900">
+                                    <h4 className="min-w-0 font-bold text-base leading-snug text-slate-900 [overflow-wrap:anywhere]">
                                       {item.tienda}
                                     </h4>
-                                    {esRecomendada && (
+                                  </div>
+                                  <div className="flex items-center justify-between gap-2 mt-2">
+                                    {esRecomendada ? (
                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
                                         ★ Sugerida
                                       </span>
-                                    )}
+                                    ) : <span />}
+                                    <div className="shrink-0">
+                                      {renderBadgeConfiabilidad(item.confiabilidad_score)}
+                                    </div>
                                   </div>
-                                  <span className="text-xs text-slate-600 line-clamp-1 mt-1 font-medium">
+                                  <p className="text-sm text-slate-600 mt-2 font-medium [overflow-wrap:anywhere]">
                                     {item.producto}
-                                  </span>
-                                </div>
-                                <div className="shrink-0">
-                                  {renderBadgeConfiabilidad(item.confiabilidad_score)}
+                                  </p>
                                 </div>
                               </div>
 
