@@ -659,7 +659,7 @@ export default function Home() {
         </section>
 
         {/* ========================================================================= */}
-        {/* PANEL DE CONTROL: PARÁMETROS Y BÚSQUEDA INTEGRADA */}
+        {/* PANEL DE CONTROL: FILTROS Y BÚSQUEDA */}
         {/* ========================================================================= */}
         <div className="grid grid-cols-1 2xl:grid-cols-4 gap-6">
           
@@ -673,11 +673,8 @@ export default function Home() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                     </svg>
                   </div>
-                  Parámetros
-                </h2>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">
                   Filtros
-                </span>
+                </h2>
               </div>
 
               {/* Selector de Ciudad de Entrega */}
@@ -727,33 +724,41 @@ export default function Home() {
               {/* Presupuesto Máximo con Presets Rápidos */}
               <div className="space-y-2 pt-1">
                 <label htmlFor="presupuesto" className="block text-xs font-bold text-slate-700">
-                  Presupuesto máximo <span className="text-slate-400 font-normal">(Opcional)</span>
+                  Presupuesto máximo (S/) <span className="text-slate-400 font-normal">(Opcional)</span>
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-xs font-bold text-slate-400">
-                    S/
+                <div className="space-y-3">
+                  <div>
+                    <input
+                      id="presupuesto-rango"
+                      type="range"
+                      min="0"
+                      max={Math.max(1500, Math.ceil((Number(presupuestoMaximo) || 0) / 10) * 10)}
+                      step="10"
+                      value={presupuestoMaximo ? Number(presupuestoMaximo) : 0}
+                      onChange={(e) => setPresupuestoMaximo(e.target.value === "0" ? "" : e.target.value)}
+                      disabled={cargando}
+                      aria-label="Ajustar presupuesto máximo con el deslizador"
+                      aria-valuetext={presupuestoMaximo ? `S/ ${presupuestoMaximo}` : "Sin límite"}
+                      className="w-full accent-indigo-600 cursor-pointer disabled:cursor-not-allowed"
+                    />
+                    <div className="flex justify-between text-xs text-slate-500 mt-1">
+                      <span>Sin límite</span>
+                      <span>S/ {Math.max(1500, Math.ceil((Number(presupuestoMaximo) || 0) / 10) * 10)}</span>
+                    </div>
                   </div>
-                  <input
-                    id="presupuesto"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={presupuestoMaximo}
-                    onChange={(e) => setPresupuestoMaximo(e.target.value)}
-                    placeholder="Ej. 240"
-                    disabled={cargando}
-                    className="w-full pl-9 pr-14 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
-                  />
-                  {presupuestoMaximo && (
-                    <button
-                      type="button"
-                      onClick={() => setPresupuestoMaximo("")}
-                      className="absolute inset-y-0 right-2 px-2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer font-bold"
-                      title="Limpiar presupuesto"
-                    >
-                      ✕
-                    </button>
-                  )}
+                  <div className="relative">
+                    <input
+                      id="presupuesto"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={presupuestoMaximo}
+                      onChange={(e) => setPresupuestoMaximo(e.target.value)}
+                      placeholder="Sin límite"
+                      disabled={cargando}
+                      className="w-full px-3 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
+                    />
+                  </div>
                 </div>
 
                 {/* Pills de Presupuestos Rápidos */}
@@ -975,18 +980,18 @@ export default function Home() {
             <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-5 sm:p-6 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.05)] ring-1 ring-slate-900/5 space-y-4">
               <form onSubmit={manejarSubmit} className="space-y-3">
                 <div className="relative">
-                  <div className="absolute top-4 left-4.5 pointer-events-none text-indigo-600">
+                  <div className="absolute top-3.5 left-4 pointer-events-none text-indigo-600">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
                   <textarea
-                    rows={2}
+                    rows={1}
                     value={consulta}
                     onChange={(e) => setConsulta(e.target.value)}
-                    placeholder="Escribe el producto eléctrico que deseas comparar (Ej. teclado mecánico inalámbrico, taladro percutor 20V, multímetro digital)..."
+                    placeholder="¿Qué producto deseas comparar? Ej. teclado mecánico inalámbrico"
                     disabled={cargando}
-                    className="w-full pl-13 pr-40 py-4 bg-slate-50/80 border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-3 focus:ring-indigo-500/25 focus:border-indigo-500 transition resize-none font-medium leading-relaxed"
+                    className="w-full min-h-14 pl-12 pr-28 py-3 bg-slate-50/80 border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-3 focus:ring-indigo-500/25 focus:border-indigo-500 transition resize-none font-medium leading-relaxed"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -994,11 +999,12 @@ export default function Home() {
                       }
                     }}
                   />
-                  <div className="absolute bottom-3.5 right-3.5 flex items-center gap-2">
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
                     <button
                       type="submit"
                       disabled={cargando || !consulta.trim()}
-                      className="px-5 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:via-indigo-700 hover:to-violet-700 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none cursor-pointer"
+                      aria-label={cargando ? "Buscando productos" : "Buscar productos"}
+                      className="px-4 py-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:via-indigo-700 hover:to-violet-700 text-white font-bold text-sm rounded-xl shadow-sm transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {cargando ? (
                         <>
@@ -1010,7 +1016,7 @@ export default function Home() {
                         </>
                       ) : (
                         <>
-                          <span>Comparar Ofertas</span>
+                          <span>Buscar</span>
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                           </svg>
